@@ -11,6 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
+        android:layout_marginTop="30dp"
         android:padding="16dp"
         android:paddingBottom="72dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -36,21 +37,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingTop="8dp"
-                android:text="Lat: --"
+                android:text="Latitude : --"
                 android:textSize="20sp"/>
 
             <TextView
                 android:id="@+id/tvLon"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Lon: --"
+                android:text="Longitude : --"
                 android:textSize="20sp"/>
 
             <TextView
                 android:id="@+id/tvGz"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Gz: --"
+                android:text="Accel g: --"
                 android:textSize="20sp"/>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

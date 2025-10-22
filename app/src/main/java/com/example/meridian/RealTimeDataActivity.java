@@ -16,22 +16,22 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import android.content.Intent;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.android.material.appbar.MaterialToolbar;
 
 public class RealTimeDataActivity extends AppCompatActivity {
 
     private static final String DEVICE_MAC_ADDRESS = "40:F5:20:57:9C:1E";
-    private static final String DEVICE_NAME_MATCH = "hc-05";
+    private static final String DEVICE_NAME_MATCH = "Meridian Pothole Tracker";
     private static final UUID SPP_UUID =
             UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
@@ -60,6 +60,8 @@ public class RealTimeDataActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_real_time_data);
+
+        setupBottomNav();
 
         tvStatus = findViewById(R.id.tvStatus);
         tvLat = findViewById(R.id.tvLat);
@@ -247,10 +249,19 @@ public class RealTimeDataActivity extends AppCompatActivity {
     }
 
     private void closeQuietly() {
-        try { if (inStr != null) inStr.close(); } catch (Exception ignored) {}
-        try { if (outStr != null) outStr.close(); } catch (Exception ignored) {}
-        try { if (btSocket != null) btSocket.close(); } catch (Exception ignored) {}
-        inStr = null; outStr = null; btSocket = null;
+        try {
+            if (inStr != null)
+                inStr.close();
+        } catch (Exception ignored) {}
+        try {
+            if (outStr != null) outStr.close();
+        } catch (Exception ignored) {}
+        try {
+            if (btSocket != null) btSocket.close();
+        } catch (Exception ignored) {}
+        inStr = null;
+        outStr = null;
+        btSocket = null;
     }
 
     private void setStatus(String s) {
@@ -262,8 +273,30 @@ public class RealTimeDataActivity extends AppCompatActivity {
         super.onDestroy();
         reading.set(false);
         if (readerThread != null) {
-            try { readerThread.interrupt(); } catch (Exception ignored) {}
+            try { readerThread.interrupt();
+            } catch (Exception ignored) {}
         }
         closeQuietly();
+    }
+    private void setupBottomNav() {
+        BottomNavigationView nav = findViewById(R.id.nav_view);
+        if (nav == null)
+            return;
+
+        nav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.navigation_home) {
+                finish();
+                return true;
+            }
+            else if (id == R.id.navigation_feed) {
+                finish();
+                return true;
+            }
+            else if (id == R.id.navigation_notifications) {
+                return true;
+            }
+            return false;
+        });
     }
 }
