@@ -184,16 +184,5 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/severityCard" />
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/navBar"
-        android:layout_width="match_parent"
-        android:layout_height="74dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/reportButton"
-        app:layout_constraintVertical_bias="1.0" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
