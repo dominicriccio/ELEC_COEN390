@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "58384781081",
+    "project_id": "elec-coen390",
+    "storage_bucket": "elec-coen390.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:58384781081:android:e17255e05b8ec0d2953f88",
+        "android_client_info": {
+          "package_name": "com.example.meridian"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "58384781081-gp0fm0ieo39rt7bis8d7ubt6o9t4ggni.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUP84KPj1mMd79qEsTf3Q7HUlFBPtcmZg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "58384781081-gp0fm0ieo39rt7bis8d7ubt6o9t4ggni.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:58384781081:android:974f623ab4ff2879953f88",
+        "android_client_info": {
+          "package_name": "com.team12.meridian"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "58384781081-gp0fm0ieo39rt7bis8d7ubt6o9t4ggni.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUP84KPj1mMd79qEsTf3Q7HUlFBPtcmZg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "58384781081-gp0fm0ieo39rt7bis8d7ubt6o9t4ggni.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

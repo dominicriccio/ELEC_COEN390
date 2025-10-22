@@ -2,62 +2,61 @@ package com.example.meridian;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.view.MotionEvent;
-
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
-
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.meridian.databinding.ActivityMainBinding;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
-    float x1,x2,y1,y2;
-    private GoogleMap mMap;
-
-    private ActivityMainBinding binding;
+    private float x1, x2, y1, y2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        bottomNav.setOnItemSelectedListener(navListener);
 
-//        BottomNavigationView navView = findViewById(R.id.nav_view);
-//        // Passing each menu ID as a set of Ids because each
-//        // menu should be considered as top level destinations.
-//        AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder()
-//                .build();
-//        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_activity_main);
-//        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-//        NavigationUI.setupWithNavController(binding.navView, navController);
-
-        SupportMapFragment mapFragment = new SupportMapFragment();
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.mapFragment, mapFragment)
-                .commit();
-
-        mapFragment.getMapAsync(this::onMapReady);
+        // Load the default fragment
+        if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
+                    new HomeFragment()).commit();
+        }
     }
 
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-        LatLng defaultLocation = new LatLng(40.7128, -74.0060);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 15));
+    private final BottomNavigationView.OnItemSelectedListener navListener =
+            new BottomNavigationView.OnItemSelectedListener() {
+                @Override
+                public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                    Fragment selectedFragment = null;
+                    int itemId = item.getItemId();
 
-        mMap.setOnMapClickListener(latLng -> {
-            mMap.clear();
-            mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Location"));
+                    if (itemId == R.id.navigation_home) {
+                        selectedFragment = new HomeFragment();
+                    } else if (itemId == R.id.navigation_notifications) {
+                        selectedFragment = new NotificationsFragment();
+                    } else if (itemId == R.id.navigation_account) {
+                        selectedFragment = new AccountFragment();
+                    } else if (itemId == R.id.navigation_feed) {
+                        selectedFragment = new FeedFragment();
+                    }
 
-        });
-    }
+                    if (selectedFragment != null) {
+                        getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.fragment_container, selectedFragment)
+                                .commit();
+                        return true;
+                    }
+                    return false;
+                }
+            };
 
+    @Override
     public boolean onTouchEvent(MotionEvent touchEvent) {
         switch (touchEvent.getAction()) {
             case MotionEvent.ACTION_DOWN:
@@ -67,15 +66,22 @@ public class MainActivity extends AppCompatActivity {
             case MotionEvent.ACTION_UP:
                 x2 = touchEvent.getX();
                 y2 = touchEvent.getY();
+                float deltaX = x2 - x1;
 
-                if (x1 < x2) { // swipe right
+                // Only trigger swipe if a significant distance is covered
+                if (deltaX > 200) {
                     Intent i = new Intent(MainActivity.this, MapsActivity.class);
+                    // This flag ensures that when you swipe to the map, the MainActivity is cleared
+                    // from the view hierarchy. When you press back from MapsActivity, you will
+                    // return to a fresh MainActivity, and the nav bar will be visible again.
+                    // This fulfills your requirement for it to "disappear".
+                    i.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(i);
                     overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+                    return true;
                 }
                 break;
         }
-        return false;
+        return super.onTouchEvent(touchEvent);
     }
-
 }

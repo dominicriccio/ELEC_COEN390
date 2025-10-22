@@ -45,6 +45,7 @@
             android:exported="true"
             android:label="@string/title_activity_maps">
         </activity>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -54,6 +55,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAeFVAH93fX6qAXKazphjU-O1MfBqspPog" />
