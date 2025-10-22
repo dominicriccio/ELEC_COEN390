@@ -65,6 +65,7 @@ public class Pothole {
     public String getSeverity() {
         return severity;
     }
+
     public String getId() {
         return id;
     }
