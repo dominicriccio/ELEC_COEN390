@@ -8,6 +8,8 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import android.util.Log;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -42,16 +44,17 @@ public class RegisterActivity extends AppCompatActivity {
         btnRegister.setOnClickListener(v -> registerUser());
     }
 
+
     private void registerUser() {
         // Get text from all fields
         String name = etName.getText().toString().trim();
         String surname = etSurname.getText().toString().trim();
-        String address = etAddress.getText().toString().trim(); // Get text from address field
+        String address = etAddress.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
         String confirmPassword = etConfirmPassword.getText().toString().trim();
 
-        // Add the address field to the validation check
+        // Validation checks...
         if (TextUtils.isEmpty(name) || TextUtils.isEmpty(surname) || TextUtils.isEmpty(address) || TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
             Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
             return;
@@ -65,38 +68,40 @@ public class RegisterActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
+                    // Hide progress bar regardless of outcome
+                    progressBar.setVisibility(View.GONE);
+
                     if (task.isSuccessful()) {
+                        Log.d("RegisterActivity", "createUserWithEmail:success");
                         FirebaseUser user = mAuth.getCurrentUser();
-                        // Pass the address to the saveUserDetails method
-                        saveUserDetails(user, name, surname, address);
+
+                        if (user != null) {
+                            String userId = user.getUid();
+
+                            Map<String, Object> userMap = new HashMap<>();
+                            userMap.put("name", name);
+                            userMap.put("surname", surname);
+                            userMap.put("address", address);
+                            userMap.put("email", email);
+
+                            // **THE FIX**: Use your existing FirestoreManager.getUsersCollection()
+                            FirestoreManager.getUsersCollection().document(userId)
+                                    .set(userMap)
+                                    .addOnSuccessListener(aVoid -> {
+                                        Log.d("RegisterActivity", "SUCCESS: User profile created for UID: " + userId);
+                                        Toast.makeText(RegisterActivity.this, "Registration successful.", Toast.LENGTH_SHORT).show();
+                                        finish(); // Go back to the previous screen
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e("RegisterActivity", "FAILURE: Error saving user details.", e);
+                                        Toast.makeText(RegisterActivity.this, "Auth successful, but failed to save details.", Toast.LENGTH_SHORT).show();
+                                    });
+                        }
                     } else {
-                        progressBar.setVisibility(View.GONE);
+                        Log.w("RegisterActivity", "createUserWithEmail:failure", task.getException());
                         Toast.makeText(RegisterActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    private void saveUserDetails(FirebaseUser firebaseUser, String name, String surname, String address) {
-        if (firebaseUser == null) {
-            return;
-        }
-        String userId = firebaseUser.getUid();
-        Map<String, Object> user = new HashMap<>();
-        user.put("name", name);
-        user.put("surname", surname);
-        user.put("address", address); // Add the address to the Map
-        user.put("email", firebaseUser.getEmail());
-        user.put("uid", userId); // It's good practice to also store the UID inside the document
-
-        FirestoreManager.getUsersCollection().document(userId).set(user)
-                .addOnSuccessListener(aVoid -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(RegisterActivity.this, "Registration Successful.", Toast.LENGTH_SHORT).show();
-                    finish(); // Close activity and go back
-                })
-                .addOnFailureListener(e -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(RegisterActivity.this, "Failed to save user details.", Toast.LENGTH_SHORT).show();
-                });
-    }
 }

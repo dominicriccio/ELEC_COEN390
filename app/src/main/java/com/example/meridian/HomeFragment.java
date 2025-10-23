@@ -39,6 +39,9 @@ import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+import com.google.firebase.Firebase;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.GeoPoint;
 
 import java.util.Arrays;
@@ -46,7 +49,7 @@ import java.util.Arrays;
 public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     private static final String TAG = "HomeFragment";
-
+    private FirebaseAuth mAuth;
     private FragmentHomeBinding binding; // Use View Binding for the fragment
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
@@ -79,7 +82,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // All setup logic from MainActivity's onCreate goes here
+        mAuth = FirebaseAuth.getInstance();
         initializePlacesApi();
         setupCustomSearch();
         setupMapFragment();
@@ -96,6 +99,14 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void submitPotholeReport() {
+
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if(currentUser == null) {
+            Toast.makeText(getContext(), "You must be logged in to submit a report", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String detectedBy = currentUser.getUid();
+
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // Request permission from the user
             ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
@@ -105,7 +116,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         // 1. Prefer location selected on the map
         if (selectedLocation != null) {
             GeoPoint geoPoint = new GeoPoint(selectedLocation.latitude, selectedLocation.longitude);
-            FirestoreManager.addPotholeReport(geoPoint, selectedSeverity, "AppUser");
+            FirestoreManager.addPotholeReport(geoPoint, selectedSeverity, detectedBy);
             Toast.makeText(getContext(), "Report sent (selected location)", Toast.LENGTH_SHORT).show();
             resetUI();
         }
@@ -115,7 +126,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                     .addOnSuccessListener(location -> {
                         if (location != null) {
                             GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-                            FirestoreManager.addPotholeReport(geoPoint, selectedSeverity, "AppUser");
+                            FirestoreManager.addPotholeReport(geoPoint, selectedSeverity, detectedBy);
                             Toast.makeText(getContext(), "Report sent (current location)", Toast.LENGTH_SHORT).show();
                             resetUI();
                         } else {
