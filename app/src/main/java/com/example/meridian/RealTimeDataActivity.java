@@ -21,6 +21,8 @@ import androidx.core.content.ContextCompat;
 import android.content.Intent;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Set;
@@ -43,7 +45,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
     private Thread readerThread;
     private final AtomicBoolean reading = new AtomicBoolean(false);
     private final StringBuilder lineBuf = new StringBuilder();
-
+    private FloatingActionButton backButton;
     private TextView tvStatus, tvLat, tvLon, tvGz;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
@@ -61,7 +63,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_real_time_data);
 
-        setupBottomNav();
 
         tvStatus = findViewById(R.id.tvStatus);
         tvLat = findViewById(R.id.tvLat);
@@ -89,6 +90,17 @@ public class RealTimeDataActivity extends AppCompatActivity {
             setStatus("Requesting permission…");
             requestBtConnectPermission();
         }
+
+        backButton = findViewById(R.id.backButton);
+
+        // Set the click listener for the button
+        backButton.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                // Trigger the exact same logic as the system back press
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 
     private boolean hasBtConnectPermission() {
@@ -278,25 +290,5 @@ public class RealTimeDataActivity extends AppCompatActivity {
         }
         closeQuietly();
     }
-    private void setupBottomNav() {
-        BottomNavigationView nav = findViewById(R.id.nav_view);
-        if (nav == null)
-            return;
 
-        nav.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.navigation_home) {
-                finish();
-                return true;
-            }
-            else if (id == R.id.navigation_feed) {
-                finish();
-                return true;
-            }
-            else if (id == R.id.navigation_notifications) {
-                return true;
-            }
-            return false;
-        });
-    }
 }
