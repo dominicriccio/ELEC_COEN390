@@ -20,9 +20,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
-        app:srcCompat="@drawable/ic_arrow_forward"
         android:layout_marginTop="56dp"
         android:layout_marginEnd="12dp"
-        android:fitsSystemWindows="true"/>
+        android:fitsSystemWindows="true"
+        android:tint="@color/white"
+        app:tint="@color/white"
+        app:srcCompat="@drawable/ic_arrow_forward"
+        map:backgroundTint="#FE2C55" />
 
 </RelativeLayout>
