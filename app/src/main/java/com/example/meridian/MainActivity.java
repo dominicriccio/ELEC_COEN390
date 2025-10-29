@@ -7,7 +7,7 @@ import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
                     } else if (itemId == R.id.navigation_account) {
                         selectedFragment = new AccountFragment();
                     } else if (itemId == R.id.navigation_feed) {
-                        selectedFragment = new FeedFragment();
+                        selectedFragment = new TrackingFragment();
                     }
 
                     if (selectedFragment != null) {

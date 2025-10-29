@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class FeedFragment extends Fragment {
+public class TrackingFragment extends Fragment {
 
     private static final String TAG = "FeedFragment";
     private FirebaseFirestore db;
@@ -39,7 +39,7 @@ public class FeedFragment extends Fragment {
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
 
-        View view = inflater.inflate(R.layout.fragment_feed, container, false);
+        View view = inflater.inflate(R.layout.fragment_tracking, container, false);
 
         listView = view.findViewById(R.id.listView);
         db = FirebaseFirestore.getInstance();
