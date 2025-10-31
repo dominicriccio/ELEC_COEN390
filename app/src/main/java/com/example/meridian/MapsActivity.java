@@ -6,20 +6,27 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.meridian.databinding.ActivityMapsBinding;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -27,6 +34,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
     private FloatingActionButton fabBack;
+    FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,12 +84,66 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Enable the My Location layer (shows the blue dot)
+        db.collection("potholes")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        GeoPoint geoPoint = doc.getGeoPoint("location");
+                        String severity = doc.getString("severity");
+                        String status = doc.getString("status");
+                        String id = doc.getId();
+
+                        if (geoPoint != null) {
+                            LatLng potholeLocation = new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude());
+
+                            // Choose color based on severity
+                            float markerColor;
+                            if ("Severe".equalsIgnoreCase(severity)) {
+                                markerColor = BitmapDescriptorFactory.HUE_RED;
+                            } else if ("Moderate".equalsIgnoreCase(severity)) {
+                                markerColor = BitmapDescriptorFactory.HUE_ORANGE;
+                            } else {
+                                markerColor = BitmapDescriptorFactory.HUE_YELLOW;
+                            }
+
+                            // Add marker
+                            mMap.addMarker(new MarkerOptions()
+                                    .position(potholeLocation)
+                                    .title("Pothole (" + severity + ")")
+                                    .snippet("Status: " + status)
+                                    .icon(BitmapDescriptorFactory.defaultMarker(markerColor)));
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to load potholes.", Toast.LENGTH_SHORT).show();
+                });
+
+        mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+        mMap.setBuildingsEnabled(false);
+        mMap.setTrafficEnabled(false);
+        mMap.setIndoorEnabled(false);
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setCompassEnabled(false);
+
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             return;
         }
+
+        try {
+            boolean success = mMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style));
+
+            if (!success) {
+                Log.e("MapStyle", "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e("MapStyle", "Can't find style. Error: ", e);
+        }
+
 
         mMap.setMyLocationEnabled(true);
 
