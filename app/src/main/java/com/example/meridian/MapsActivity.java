@@ -57,7 +57,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String severity;
         GeoPoint location;
         Timestamp timestamp;
-        List<String> followers = new ArrayList<>();
+        List<String> followers;
 
         PotholeData(String id, String status, String severity, GeoPoint location, Timestamp timestamp, List<String> followers) {
             this.id = id;
@@ -67,6 +67,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             this.timestamp = timestamp;
             if (this.followers != null) {
                 this.followers = followers;
+            }
+            else {
+                this.followers = new ArrayList<>();
             }
         }
     }
