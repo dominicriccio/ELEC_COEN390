@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- REMOVED the outer ScrollView because ConstraintLayout handles scrolling better with the new setup -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -32,10 +31,9 @@
         app:strokeColor="@color/material_on_surface_stroke"
         app:strokeWidth="1dp">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
             android:padding="16dp">
 
             <TextView
@@ -45,7 +43,29 @@
                 android:text="Account Information"
                 android:textColor="@color/black"
                 android:textSize="22sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_admin_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Admin"
+                android:textColor="#0277BD"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:chipBackgroundColor="#E1F5FE"
+                app:chipIcon="@drawable/ic_admin"
+                app:chipIconTint="#0277BD"
+                app:chipStrokeColor="#0277BD"
+                app:chipStrokeWidth="1dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:visibility="visible"
+                android:clickable="false"
+                android:focusable="false"
+                app:chipStartPadding="10dp"/>
 
             <TextView
                 android:id="@+id/tv_user_full_name"
@@ -53,7 +73,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="16sp"
-                tools:text="Name: John Appleseed" />
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_user_name_header"
+                tools:text="Name: FirstName LastName" />
 
             <TextView
                 android:id="@+id/tv_user_address"
@@ -61,6 +83,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textSize="16sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tv_user_full_name"
                 tools:text="Address: 123 Grand Av." />
 
             <TextView
@@ -69,66 +93,67 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textSize="16sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tv_user_address"
                 tools:text="Member Since: 10/10/2023" />
 
-        </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </com.google.android.material.card.MaterialCardView>
-
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/user_reports_card"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="12dp"
         app:cardCornerRadius="12dp"
         app:cardElevation="4dp"
         app:layout_constrainedHeight="true"
+        app:layout_constraintBottom_toTopOf="@id/btn_logout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/user_info_card"
-        app:layout_constraintBottom_toTopOf="@id/btn_logout"
         app:layout_constraintVertical_bias="0.0"
         app:strokeColor="@color/material_on_surface_stroke"
         app:strokeWidth="1dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Your Reports"
-        android:textColor="@color/black"
-        android:textSize="22sp"
-        android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your Reports"
+                android:textColor="@color/black"
+                android:textSize="22sp"
+                android:textStyle="bold" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_reports"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:nestedScrollingEnabled="false"
-        tools:itemCount="10"
-        tools:listitem="@layout/report_item" />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_reports"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false"
+                tools:itemCount="10"
+                tools:listitem="@layout/report_item" />
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
     <Button
-    android:id="@+id/btn_logout"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    android:backgroundTint="#FE2C55"
-    android:text="Logout"
-    app:cornerRadius="24dp"
-    app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent" />
+        android:id="@+id/btn_logout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:backgroundTint="#FE2C55"
+        android:text="Logout"
+        app:cornerRadius="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

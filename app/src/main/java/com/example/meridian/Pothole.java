@@ -3,6 +3,9 @@ package com.example.meridian;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.GeoPoint;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Represents a pothole report in Firestore.
  * Fully compatible with Firestore automatic data mapping.
@@ -15,9 +18,10 @@ public class Pothole {
     private String detectedBy;   // userId or "AppUser"
     private Timestamp timestamp; // Firestore timestamp
     private GeoPoint location;   // GPS coordinates
+    private List<String> followers;
 
     // Required public no-argument constructor for Firestore
-    public Pothole() {}
+    public Pothole() { this.followers = new ArrayList<>(); }
 
     public Pothole(String id, String severity, String status,
                    String detectedBy, Timestamp timestamp, GeoPoint location) {
@@ -81,6 +85,12 @@ public class Pothole {
     public void setLocation(GeoPoint location) {
         this.location = location;
     }
+
+    public List<String> getFollowers() {
+        return followers != null ? followers : new ArrayList<>();
+    }
+
+    public void setFollowers(List<String> followers) { this.followers = followers; }
 
     // -----------------------
     // Convenience methods

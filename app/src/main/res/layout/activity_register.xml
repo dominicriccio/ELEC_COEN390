@@ -103,10 +103,37 @@
             android:inputType="textPassword"
             android:textAlignment="center"
             android:textSize="15sp"
-            app:layout_constraintBottom_toTopOf="@+id/btn_register"
+            app:layout_constraintBottom_toTopOf="@+id/cb_register_as_admin"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/et_register_password" />
+
+        <CheckBox
+            android:id="@+id/cb_register_as_admin"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Register as Administrator"
+            app:layout_constraintBottom_toTopOf="@+id/et_admin_password"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/et_register_confirm_password" />
+
+        <EditText
+            android:id="@+id/et_admin_password"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Admin Password"
+            android:inputType="textPassword"
+            android:textAlignment="center"
+            android:textSize="15sp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            app:layout_constraintBottom_toTopOf="@+id/btn_register"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cb_register_as_admin" />
 
         <Button
             android:id="@+id/btn_register"
@@ -116,10 +143,10 @@
             android:backgroundTint="#FE2C55"
             android:text="Register"
             app:cornerRadius="24dp"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/btn_register_back"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/et_register_confirm_password" />
+            app:layout_constraintTop_toBottomOf="@id/et_admin_password" />
 
         <Button
             android:id="@+id/btn_register_back"
@@ -135,7 +162,6 @@
             app:layout_constraintHorizontal_bias="0.498"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/btn_register"
-            app:layout_constraintVertical_bias="1.0"
             app:strokeColor="#FE2C55" />
 
         <ProgressBar

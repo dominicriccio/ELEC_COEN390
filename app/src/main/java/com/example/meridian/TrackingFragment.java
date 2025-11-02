@@ -15,22 +15,31 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import com.google.android.gms.tasks.Task;
 
 public class TrackingFragment extends Fragment {
 
-    private static final String TAG = "FeedFragment";
+    private static final String TAG = "TrackingFragment";
     private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
     private ListView listView;
     private final List<Pothole> potholeList = new ArrayList<>();
+    private final Set<String> potholeIds = new HashSet<>();
     private PotholeAdapter adapter;
 
     @Nullable
@@ -43,11 +52,12 @@ public class TrackingFragment extends Fragment {
 
         listView = view.findViewById(R.id.listView);
         db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
         adapter = new PotholeAdapter(potholeList);
         listView.setAdapter(adapter);
 
-        loadAllPotholes();
+        loadPersonalizedPotholes();
 
         Button realTimeBtn = view.findViewById(R.id.realtimeButton);
         realTimeBtn.setOnClickListener(v -> {
@@ -61,39 +71,84 @@ public class TrackingFragment extends Fragment {
     /**
      * Loads all potholes from the Firestore database.
      */
-    private void loadAllPotholes() {
-        db.collection("potholes")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    potholeList.clear();
 
-                    for (DocumentSnapshot doc : querySnapshot) {
-                        try {
-                            // Assuming your Pothole class has a no-arg constructor
-                            // and proper Firestore mapping annotations or fields
-                            Pothole pothole = doc.toObject(Pothole.class);
-                            if (pothole != null) {
-                                // optionally store Firestore document ID
-                                pothole.setId(doc.getId());
-                                potholeList.add(pothole);
-                            }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error converting document to Pothole", e);
-                        }
+    private void loadPersonalizedPotholes() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(requireContext(), "Please log in to see your tracked potholes.", Toast.LENGTH_LONG).show();
+            potholeList.clear();
+            if (adapter != null) { // Add a null check for safety
+                adapter.notifyDataSetChanged();
+            }
+            return;
+        }
+
+        String userId = currentUser.getUid();
+
+        // --- START OF FIX ---
+        // Use the correct Task class: com.google.android.gms.tasks.Task
+
+        // Query 1: Potholes reported BY the user
+        Task<QuerySnapshot> reportedTask = db.collection("potholes")
+                .whereEqualTo("detectedBy", userId)
+                .get();
+
+        // Query 2: Potholes followed BY the user
+        Task<QuerySnapshot> followedTask = db.collection("potholes")
+                .whereArrayContains("followers", userId)
+                .get();
+
+        // --- END OF FIX ---
+
+
+        // Combine the results of both tasks (This part is now correct because the Task types match)
+        Tasks.whenAllSuccess(reportedTask, followedTask).addOnSuccessListener(results -> {
+            potholeList.clear();
+            potholeIds.clear();
+
+            // Process results from the first query (reported)
+            QuerySnapshot reportedSnapshots = (QuerySnapshot) results.get(0);
+            for (DocumentSnapshot doc : reportedSnapshots) {
+                if (!potholeIds.contains(doc.getId())) {
+                    Pothole pothole = doc.toObject(Pothole.class);
+                    if (pothole != null) {
+                        pothole.setId(doc.getId());
+                        potholeList.add(pothole);
+                        potholeIds.add(doc.getId());
                     }
+                }
+            }
 
-                    adapter.notifyDataSetChanged();
-
-                    if (potholeList.isEmpty()) {
-                        Toast.makeText(requireContext(), "No potholes found.", Toast.LENGTH_SHORT).show();
+            // Process results from the second query (followed)
+            QuerySnapshot followedSnapshots = (QuerySnapshot) results.get(1);
+            for (DocumentSnapshot doc : followedSnapshots) {
+                // The Set ensures we don't add duplicates
+                if (!potholeIds.contains(doc.getId())) {
+                    Pothole pothole = doc.toObject(Pothole.class);
+                    if (pothole != null) {
+                        pothole.setId(doc.getId());
+                        potholeList.add(pothole);
+                        potholeIds.add(doc.getId());
                     }
+                }
+            }
 
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error fetching potholes", e);
-                    Toast.makeText(requireContext(), "Failed to load potholes.", Toast.LENGTH_SHORT).show();
-                });
+            // Sort the final list by timestamp (most recent first)
+            potholeList.sort((p1, p2) -> {
+                if (p1.getTimestamp() == null || p2.getTimestamp() == null) return 0;
+                return p2.getTimestamp().compareTo(p1.getTimestamp());
+            });
+
+            adapter.notifyDataSetChanged();
+
+            if (potholeList.isEmpty()) {
+                Toast.makeText(requireContext(), "You are not tracking any potholes.", Toast.LENGTH_SHORT).show();
+            }
+
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error fetching personalized potholes", e);
+            Toast.makeText(requireContext(), "Failed to load tracked potholes.", Toast.LENGTH_SHORT).show();
+        });
     }
 
     // --------------------------------

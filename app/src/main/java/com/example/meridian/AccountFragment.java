@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.chip.Chip;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -119,13 +120,22 @@ public class AccountFragment extends Fragment {
                         TextView tvFullName = loggedInView.findViewById(R.id.tv_user_full_name);
                         TextView tvAddress = loggedInView.findViewById(R.id.tv_user_address);
                         TextView tvMemberSince = loggedInView.findViewById(R.id.tv_member_since);
+                        Chip adminBadge = loggedInView.findViewById(R.id.chip_admin_badge);
+
 
                         String name = document.getString("name");
                         String surname = document.getString("surname");
                         String address = document.getString("address");
+                        String role = document.getString("role");
 
                         tvFullName.setText("Name: " + (name != null ? name : "") + " " + (surname != null ? surname : ""));
                         tvAddress.setText("Address: " + (address != null ? address : "Not Provided"));
+
+                        if ("admin".equals(role)) {
+                            adminBadge.setVisibility(View.VISIBLE); // Show the badge for admins
+                        } else {
+                            adminBadge.setVisibility(View.GONE);  // Hide it for everyone else
+                        }
 
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null && user.getMetadata() != null) {
