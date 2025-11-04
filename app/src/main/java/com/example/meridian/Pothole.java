@@ -1,7 +1,12 @@
 package com.example.meridian;
 
+import static java.lang.Math.abs;
+
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.GeoPoint;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents a pothole report in Firestore.
@@ -15,9 +20,10 @@ public class Pothole {
     private String detectedBy;   // userId or "AppUser"
     private Timestamp timestamp; // Firestore timestamp
     private GeoPoint location;   // GPS coordinates
+    private List<String> followers;
 
     // Required public no-argument constructor for Firestore
-    public Pothole() {}
+    public Pothole() { this.followers = new ArrayList<>(); }
 
     public Pothole(String id, String severity, String status,
                    String detectedBy, Timestamp timestamp, GeoPoint location) {
@@ -27,6 +33,15 @@ public class Pothole {
         this.detectedBy = detectedBy;
         this.timestamp = timestamp;
         this.location = location;
+    }
+
+    public Pothole(double lat, double lon, double az) {
+        this.id = null; //ID will be set by Firestore
+        this.severity = (abs(az) > 8) ? "High" : (abs(az) > 4) ? "Moderate" : "Low";
+        this.status = "Reported";
+        this.detectedBy = "AppUser";
+        this.timestamp = Timestamp.now();
+        this.location = new GeoPoint(lat, lon);
     }
 
     // -----------------------
@@ -81,6 +96,12 @@ public class Pothole {
     public void setLocation(GeoPoint location) {
         this.location = location;
     }
+
+    public List<String> getFollowers() {
+        return followers != null ? followers : new ArrayList<>();
+    }
+
+    public void setFollowers(List<String> followers) { this.followers = followers; }
 
     // -----------------------
     // Convenience methods
