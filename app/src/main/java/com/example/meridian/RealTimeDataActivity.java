@@ -1,5 +1,7 @@
 package com.example.meridian;
 
+import static java.lang.Math.abs;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
@@ -236,7 +238,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
         if (line.isEmpty()) return;
 
         String[] parts = line.split(",");
-        Double lat = null, lon = null, az = null;
+        Double lat = null, lon = null, az = null, azMax60s = null;
 
         for (String p : parts) {
             String[] kv = p.split("=", 2);
@@ -248,15 +250,21 @@ public class RealTimeDataActivity extends AppCompatActivity {
                     case "lat": lat = Double.valueOf(val); break;
                     case "lon": lon = Double.valueOf(val); break;
                     case "az":  az  = Double.valueOf(val);  break;
+                    case "azMax60s": azMax60s = Double.valueOf(val); break; //add the max acc in past 60s
+                }
+
+                if (abs(az) > 2) { //create an Entry in the database when intensity larger than 2g.
+                    Pothole pothole = new Pothole(lat, lon, az);
                 }
             } catch (NumberFormatException ignored) {}
         }
 
-        Double fLat = lat, fLon = lon, fGz = az;
+        Double fLat = lat, fLon = lon, fGz = az, fAzMax60s = azMax60s;
         ui.post(() -> {
             if (fLat != null) tvLat.setText(String.format("Latitude %.6f", fLat));
             if (fLon != null) tvLon.setText(String.format("Longitude %.6f", fLon));
             if (fGz  != null) tvGz.setText(String.format("Accel g %.2f", fGz));
+            if(fAzMax60s != null) tvGz.setText(String.format("Azimuth Max 60s %.2f", fAzMax60s));
         });
     }
 
