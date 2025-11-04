@@ -199,6 +199,14 @@ public class AccountFragment extends Fragment {
             Toast.makeText(getContext(), "Logged out", Toast.LENGTH_SHORT).show();
             updateView();
         });
+        //settings
+        View btnEditProfile = view.findViewById(R.id.btn_edit_profile);
+        if (btnEditProfile != null) {
+            btnEditProfile.setOnClickListener(v -> {
+                Intent intent = new Intent(getActivity(), EditProfileActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private static class PotholeReport {

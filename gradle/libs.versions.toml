@@ -22,6 +22,7 @@ media3Common = "1.8.0"
 contentpager = "1.0.0"
 identityAndroidLegacy = "202411.1"
 impress = "0.0.7"
+activity = "1.11.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -44,6 +45,7 @@ media3-common = { group = "androidx.media3", name = "media3-common", version.ref
 contentpager = { group = "androidx.contentpager", name = "contentpager", version.ref = "contentpager" }
 identity-android-legacy = { group = "com.android.identity", name = "identity-android-legacy", version.ref = "identityAndroidLegacy" }
 impress = { group = "com.google.ar", name = "impress", version.ref = "impress" }
+activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
