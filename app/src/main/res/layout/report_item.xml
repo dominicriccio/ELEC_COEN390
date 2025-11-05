@@ -5,22 +5,28 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:paddingBottom="8dp"
+    android:paddingHorizontal="12dp"
 
-    <TextView
-        android:id="@+id/tv_pothole_id"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        tools:text="Pothole ID: aXbYcZ123" />
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?attr/selectableItemBackground">
 
-    <TextView
-        android:id="@+id/tv_report_status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:textSize="14sp"
-        tools:text="Status: Reported (5 days ago)" />
+<TextView
+android:id="@+id/tv_pothole_id"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:textSize="16sp"
+android:textStyle="bold"
+tools:text="Pothole ID: aXbYcZ123" />
 
-</LinearLayout>
+<TextView
+android:id="@+id/tv_report_status"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:layout_marginTop="2dp"
+android:textSize="14sp"
+android:textColor="@android:color/darker_gray"
+tools:text="Status: Reported (5 days ago)" />
+
+    </LinearLayout>

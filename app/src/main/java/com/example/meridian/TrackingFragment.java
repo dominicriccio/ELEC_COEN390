@@ -21,6 +21,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 
@@ -30,7 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import com.google.android.gms.tasks.Task;
+import java.util.concurrent.TimeUnit;
 
 public class TrackingFragment extends Fragment {
 
@@ -57,7 +58,22 @@ public class TrackingFragment extends Fragment {
         adapter = new PotholeAdapter(potholeList);
         listView.setAdapter(adapter);
 
-        loadPersonalizedPotholes();
+        listView.setOnItemClickListener((parent, itemView, position, id) -> {
+            Pothole p = potholeList.get(position);
+            if (p == null) return;
+
+            ReportFragment dialog = new ReportFragment();
+            Bundle args = new Bundle();
+            args.putString("id", p.getId());
+            args.putString("status", p.getStatus());
+            args.putString("severity", p.getSeverity());
+            args.putDouble("latitude", p.getLocation() != null ? p.getLocation().getLatitude() : 0d);
+            args.putDouble("longitude", p.getLocation() != null ? p.getLocation().getLongitude() : 0d);
+            args.putLong("timestampMillis", p.getTimestamp() != null ? p.getTimestamp().toDate().getTime() : 0L);
+            dialog.setArguments(args);
+
+            dialog.show(getParentFragmentManager(), "reportDetails");
+        });
 
         Button realTimeBtn = view.findViewById(R.id.realtimeButton);
         realTimeBtn.setOnClickListener(v -> {
@@ -65,78 +81,42 @@ public class TrackingFragment extends Fragment {
             startActivity(intent);
         });
 
+        loadPersonalizedPotholes();
         return view;
     }
-
-    /**
-     * Loads all potholes from the Firestore database.
-     */
 
     private void loadPersonalizedPotholes() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Toast.makeText(requireContext(), "Please log in to see your tracked potholes.", Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(), "Please log in to see tracked potholes.", Toast.LENGTH_LONG).show();
             potholeList.clear();
-            if (adapter != null) { // Add a null check for safety
-                adapter.notifyDataSetChanged();
-            }
+            adapter.notifyDataSetChanged();
             return;
         }
 
         String userId = currentUser.getUid();
 
-        // --- START OF FIX ---
-        // Use the correct Task class: com.google.android.gms.tasks.Task
-
-        // Query 1: Potholes reported BY the user
-        Task<QuerySnapshot> reportedTask = db.collection("potholes")
+        var reportedTask = db.collection("potholes")
                 .whereEqualTo("detectedBy", userId)
                 .get();
 
-        // Query 2: Potholes followed BY the user
-        Task<QuerySnapshot> followedTask = db.collection("potholes")
+        var followedTask = db.collection("potholes")
                 .whereArrayContains("followers", userId)
                 .get();
 
-        // --- END OF FIX ---
-
-
-        // Combine the results of both tasks (This part is now correct because the Task types match)
         Tasks.whenAllSuccess(reportedTask, followedTask).addOnSuccessListener(results -> {
             potholeList.clear();
             potholeIds.clear();
 
-            // Process results from the first query (reported)
-            QuerySnapshot reportedSnapshots = (QuerySnapshot) results.get(0);
-            for (DocumentSnapshot doc : reportedSnapshots) {
-                if (!potholeIds.contains(doc.getId())) {
-                    Pothole pothole = doc.toObject(Pothole.class);
-                    if (pothole != null) {
-                        pothole.setId(doc.getId());
-                        potholeList.add(pothole);
-                        potholeIds.add(doc.getId());
-                    }
-                }
-            }
+            QuerySnapshot reported = (QuerySnapshot) results.get(0);
+            QuerySnapshot followed = (QuerySnapshot) results.get(1);
 
-            // Process results from the second query (followed)
-            QuerySnapshot followedSnapshots = (QuerySnapshot) results.get(1);
-            for (DocumentSnapshot doc : followedSnapshots) {
-                // The Set ensures we don't add duplicates
-                if (!potholeIds.contains(doc.getId())) {
-                    Pothole pothole = doc.toObject(Pothole.class);
-                    if (pothole != null) {
-                        pothole.setId(doc.getId());
-                        potholeList.add(pothole);
-                        potholeIds.add(doc.getId());
-                    }
-                }
-            }
+            for (DocumentSnapshot doc : reported) addUniquePothole(doc);
+            for (DocumentSnapshot doc : followed) addUniquePothole(doc);
 
-            // Sort the final list by timestamp (most recent first)
-            potholeList.sort((p1, p2) -> {
-                if (p1.getTimestamp() == null || p2.getTimestamp() == null) return 0;
-                return p2.getTimestamp().compareTo(p1.getTimestamp());
+            potholeList.sort((a, b) -> {
+                if (a.getTimestamp() == null || b.getTimestamp() == null) return 0;
+                return b.getTimestamp().compareTo(a.getTimestamp());
             });
 
             adapter.notifyDataSetChanged();
@@ -144,90 +124,73 @@ public class TrackingFragment extends Fragment {
             if (potholeList.isEmpty()) {
                 Toast.makeText(requireContext(), "You are not tracking any potholes.", Toast.LENGTH_SHORT).show();
             }
-
         }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error fetching personalized potholes", e);
+            Log.e(TAG, "Error fetching potholes", e);
             Toast.makeText(requireContext(), "Failed to load tracked potholes.", Toast.LENGTH_SHORT).show();
         });
     }
 
-    // --------------------------------
-    // ViewHolder Class
-    // --------------------------------
-    private static class PotholeViewHolder {
-        TextView potholeId, severityText, locationText, creatorText, dateText;
-
-        PotholeViewHolder(View itemView) {
-            potholeId = itemView.findViewById(R.id.potholeId);
-            severityText = itemView.findViewById(R.id.severityText);
-            locationText = itemView.findViewById(R.id.locationText);
-            creatorText = itemView.findViewById(R.id.creatorText);
-            dateText = itemView.findViewById(R.id.dateText);
+    private void addUniquePothole(DocumentSnapshot doc) {
+        if (potholeIds.contains(doc.getId())) return;
+        Pothole pothole = doc.toObject(Pothole.class);
+        if (pothole != null) {
+            pothole.setId(doc.getId());
+            potholeList.add(pothole);
+            potholeIds.add(doc.getId());
         }
     }
 
-    // --------------------------------
-    // Adapter Class (inline)
-    // --------------------------------
+    // -------------------- Adapter --------------------
+    private static class PotholeViewHolder {
+        TextView id, severity, location, creator, date;
+        PotholeViewHolder(View v) {
+            id = v.findViewById(R.id.potholeId);
+            severity = v.findViewById(R.id.severityText);
+            location = v.findViewById(R.id.locationText);
+            creator = v.findViewById(R.id.creatorText);
+            date = v.findViewById(R.id.dateText);
+        }
+    }
+
     private class PotholeAdapter extends android.widget.BaseAdapter {
         private final List<Pothole> potholes;
+        PotholeAdapter(List<Pothole> list) { this.potholes = list; }
 
-        PotholeAdapter(List<Pothole> potholes) {
-            this.potholes = potholes;
-        }
-
-        @Override
-        public int getCount() {
-            return potholes.size();
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return potholes.get(position);
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
+        @Override public int getCount() { return potholes.size(); }
+        @Override public Object getItem(int pos) { return potholes.get(pos); }
+        @Override public long getItemId(int pos) { return pos; }
 
         @NonNull
         @Override
-        public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+        public View getView(int pos, View convertView, @NonNull ViewGroup parent) {
             PotholeViewHolder holder;
-
             if (convertView == null) {
                 convertView = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.pothole_item, parent, false);
                 holder = new PotholeViewHolder(convertView);
                 convertView.setTag(holder);
-            } else {
-                holder = (PotholeViewHolder) convertView.getTag();
-            }
+            } else holder = (PotholeViewHolder) convertView.getTag();
 
-            Pothole pothole = potholes.get(position);
+            Pothole p = potholes.get(pos);
 
-            // Defensive null checks — avoid crashes if a field is missing
-            holder.potholeId.setText("Pothole ID: " + (pothole.getId() != null ? pothole.getId() : "N/A"));
-            holder.severityText.setText("Severity: " + (pothole.getSeverity() != null ? pothole.getSeverity() : "Unknown"));
+            holder.id.setText("Pothole ID: " + (p.getId() != null ? p.getId() : "N/A"));
+            holder.severity.setText("Severity: " + (p.getSeverity() != null ? p.getSeverity() : "Unknown"));
 
-            if (pothole.getLocation() != null) {
-                double lat = pothole.getLocation().getLatitude();
-                double lon = pothole.getLocation().getLongitude();
-                holder.locationText.setText(String.format(Locale.getDefault(), "Location: %.5f, %.5f", lat, lon));
-            } else {
-                holder.locationText.setText("Location: Unknown");
-            }
+            if (p.getLocation() != null) {
+                holder.location.setText(String.format(Locale.getDefault(),
+                        "Location: %.5f, %.5f",
+                        p.getLocation().getLatitude(),
+                        p.getLocation().getLongitude()));
+            } else holder.location.setText("Location: Unknown");
 
-            holder.creatorText.setText("Reported by: " + (pothole.getDetectedBy() != null ? pothole.getDetectedBy() : "Anonymous"));
+            holder.creator.setText("Reported by: " +
+                    (p.getDetectedBy() != null ? p.getDetectedBy() : "Anonymous"));
 
-            Timestamp ts = pothole.getTimestamp();
+            Timestamp ts = p.getTimestamp();
             if (ts != null) {
-                SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
-                holder.dateText.setText("Date Created: " + sdf.format(ts.toDate()));
-            } else {
-                holder.dateText.setText("Date Created: Unknown");
-            }
+                long daysAgo = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis() - ts.toDate().getTime());
+                holder.date.setText("Reported " + daysAgo + " day(s) ago");
+            } else holder.date.setText("Date: Unknown");
 
             return convertView;
         }
