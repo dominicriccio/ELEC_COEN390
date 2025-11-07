@@ -1,5 +1,8 @@
 package com.example.meridian;
 
+import static java.lang.Math.abs;
+import android.content.Context;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
@@ -22,6 +25,7 @@ import androidx.core.content.ContextCompat;
 import android.content.Intent;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.firestore.GeoPoint;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -262,6 +266,13 @@ public class RealTimeDataActivity extends AppCompatActivity {
                     case "lon": lon = Double.valueOf(val); break;
                     case "az":  az  = Double.valueOf(val); break;
                 }
+
+                if(abs(az) > 2){
+                    Pothole pothole = new Pothole(lat, lon, az);
+                    FirestoreManager.addPotholeReport(pothole.getLocation(), pothole.getSeverity(), pothole.getDetectedBy());
+                    Toast.makeText(this, "Report sent (Hardware Report)", Toast.LENGTH_SHORT).show();
+                }
+
             } catch (NumberFormatException ignored) {}
         }
 

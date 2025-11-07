@@ -39,7 +39,7 @@ public class Pothole {
         this.id = null; //ID will be set by Firestore
         this.severity = (abs(az) > 8) ? "High" : (abs(az) > 4) ? "Moderate" : "Low";
         this.status = "Reported";
-        this.detectedBy = "AppUser";
+        this.detectedBy = "Hardware Device";
         this.timestamp = Timestamp.now();
         this.location = new GeoPoint(lat, lon);
     }
