@@ -1,7 +1,5 @@
 package com.example.meridian;
 
-import static java.lang.Math.abs;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
@@ -13,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,15 +21,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import android.content.Intent;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import androidx.core.util.Pair;
 
 public class RealTimeDataActivity extends AppCompatActivity {
 
@@ -51,6 +52,9 @@ public class RealTimeDataActivity extends AppCompatActivity {
     private TextView tvStatus, tvLat, tvLon, tvGz;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
+    // Stores az values for last 60 seconds
+    private final ArrayList<Pair<Long, Double>> recentAz = new ArrayList<>();
+
     private final ActivityResultLauncher<String> btConnectPermLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) connectToPairedDevice();
@@ -64,7 +68,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_real_time_data);
-
 
         tvStatus = findViewById(R.id.tvStatus);
         tvLat = findViewById(R.id.tvLat);
@@ -94,15 +97,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
         }
 
         backButton = findViewById(R.id.backButton);
-
-        // Set the click listener for the button
-        backButton.setOnClickListener(new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View v) {
-                // Trigger the exact same logic as the system back press
-                getOnBackPressedDispatcher().onBackPressed();
-            }
-        });
+        backButton.setOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
     }
 
     private boolean hasBtConnectPermission() {
@@ -124,6 +119,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
                     ui.post(() -> setStatus("Permission required"));
                     return;
                 }
+
                 BluetoothDevice device = pickPairedDeviceSafe();
                 if (device == null) {
                     ui.post(() -> setStatus("No paired device found"));
@@ -142,17 +138,26 @@ public class RealTimeDataActivity extends AppCompatActivity {
                 inStr  = btSocket.getInputStream();
                 outStr = btSocket.getOutputStream();
 
+                // Optional: send handshake if device expects it
+                try {
+                    outStr.write("START\n".getBytes());
+                    outStr.flush();
+                } catch (Exception e) {
+                    Log.e("BT", "Failed to send handshake", e);
+                }
+
                 ui.post(() -> {
                     Toast.makeText(this, "Connected to " + safeName(device), Toast.LENGTH_SHORT).show();
                     setStatus("Connected");
                 });
+
                 startReader();
 
             } catch (SecurityException se) {
                 ui.post(() -> setStatus("Permission denied"));
             } catch (Exception e) {
                 ui.post(() -> setStatus("Connection failed"));
-                e.printStackTrace();
+                Log.e("BT", "Connection exception", e);
                 closeQuietly();
             }
         }).start();
@@ -160,28 +165,23 @@ public class RealTimeDataActivity extends AppCompatActivity {
 
     @SuppressLint("MissingPermission")
     private BluetoothDevice pickPairedDeviceSafe() {
-        if (!hasBtConnectPermission()) return null;
-        if (btAdapter == null) return null;
+        if (!hasBtConnectPermission() || btAdapter == null) return null;
 
         Set<BluetoothDevice> bonded;
-        try {
-            bonded = btAdapter.getBondedDevices();
-        } catch (SecurityException se) {
-            return null;
-        }
+        try { bonded = btAdapter.getBondedDevices(); } catch (SecurityException se) { return null; }
         if (bonded == null || bonded.isEmpty()) return null;
 
         if (!TextUtils.isEmpty(DEVICE_MAC_ADDRESS)) {
-            for (BluetoothDevice d : bonded) {
+            for (BluetoothDevice d : bonded)
                 if (eqAddr(d.getAddress(), DEVICE_MAC_ADDRESS)) return d;
-            }
         }
         if (!TextUtils.isEmpty(DEVICE_NAME_MATCH)) {
             String needle = DEVICE_NAME_MATCH.toLowerCase();
             for (BluetoothDevice d : bonded) {
-                String name;
-                try { name = d.getName(); } catch (SecurityException se) { continue; }
-                if (name != null && name.toLowerCase().contains(needle)) return d;
+                try {
+                    String name = d.getName();
+                    if (name != null && name.toLowerCase().contains(needle)) return d;
+                } catch (SecurityException ignored) {}
             }
         }
         return bonded.iterator().next();
@@ -204,15 +204,26 @@ public class RealTimeDataActivity extends AppCompatActivity {
         if (inStr == null) return;
         reading.set(true);
         ui.post(() -> setStatus("Reading…"));
+
         readerThread = new Thread(() -> {
             byte[] buf = new byte[512];
             try {
-                while (reading.get()) {
-                    int n = inStr.read(buf);
-                    if (n == -1) break;
-                    appendAndProcess(new String(buf, 0, n));
+                while (reading.get() && btSocket != null && btSocket.isConnected()) {
+                    try {
+                        int n = inStr.read(buf);
+                        if (n > 0) {
+                            appendAndProcess(new String(buf, 0, n));
+                        } else if (n == -1) {
+                            Log.w("BT", "Stream closed by device");
+                            break;
+                        } else {
+                            Thread.sleep(50);
+                        }
+                    } catch (Exception e) {
+                        Log.e("BT", "Reader exception", e);
+                        break;
+                    }
                 }
-            } catch (Exception ignored) {
             } finally {
                 reading.set(false);
                 closeQuietly();
@@ -238,7 +249,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
         if (line.isEmpty()) return;
 
         String[] parts = line.split(",");
-        Double lat = null, lon = null, az = null, azMax60s = null;
+        Double lat = null, lon = null, az = null;
 
         for (String p : parts) {
             String[] kv = p.split("=", 2);
@@ -249,39 +260,48 @@ public class RealTimeDataActivity extends AppCompatActivity {
                 switch (key) {
                     case "lat": lat = Double.valueOf(val); break;
                     case "lon": lon = Double.valueOf(val); break;
-                    case "az":  az  = Double.valueOf(val);  break;
-                    case "azMax60s": azMax60s = Double.valueOf(val); break; //add the max acc in past 60s
-                }
-
-                if (abs(az) > 2) { //create an Entry in the database when intensity larger than 2g.
-                    Pothole pothole = new Pothole(lat, lon, az);
+                    case "az":  az  = Double.valueOf(val); break;
                 }
             } catch (NumberFormatException ignored) {}
         }
 
-        Double fLat = lat, fLon = lon, fGz = az, fAzMax60s = azMax60s;
+        // Track max az over last 60 seconds
+        double azMax60s = 0;
+        long now = System.currentTimeMillis();
+        if (az != null) recentAz.add(new Pair<>(now, az));
+
+        Iterator<Pair<Long, Double>> iter = recentAz.iterator();
+        while (iter.hasNext()) {
+            Pair<Long, Double> p = iter.next();
+            if (p.first < now - 60_000) iter.remove(); // remove older than 60s
+            else if (p.second > azMax60s) azMax60s = p.second;
+        }
+
+        final Double fLat = lat;
+        final Double fLon = lon;
+        final Double fAz = az;
+        final Double fAzMax60s = azMax60s;
+
         ui.post(() -> {
             if (fLat != null) tvLat.setText(String.format("Latitude %.6f", fLat));
             if (fLon != null) tvLon.setText(String.format("Longitude %.6f", fLon));
-            if (fGz  != null) tvGz.setText(String.format("Accel g %.2f", fGz));
-            if(fAzMax60s != null) tvGz.setText(String.format("Azimuth Max 60s %.2f", fAzMax60s));
+
+            StringBuilder sb = new StringBuilder();
+            if (fAz != null) sb.append(String.format("Accel g %.2f", fAz));
+            if (fAzMax60s != null && fAzMax60s > 0) {
+                if (sb.length() > 0) sb.append(" | ");
+                sb.append(String.format("Az Max 60s %.2f", fAzMax60s));
+            }
+
+            tvGz.setText(sb.toString());
         });
     }
 
     private void closeQuietly() {
-        try {
-            if (inStr != null)
-                inStr.close();
-        } catch (Exception ignored) {}
-        try {
-            if (outStr != null) outStr.close();
-        } catch (Exception ignored) {}
-        try {
-            if (btSocket != null) btSocket.close();
-        } catch (Exception ignored) {}
-        inStr = null;
-        outStr = null;
-        btSocket = null;
+        try { if (inStr != null) inStr.close(); } catch (Exception ignored) {}
+        try { if (outStr != null) outStr.close(); } catch (Exception ignored) {}
+        try { if (btSocket != null) btSocket.close(); } catch (Exception ignored) {}
+        inStr = null; outStr = null; btSocket = null;
     }
 
     private void setStatus(String s) {
@@ -293,10 +313,8 @@ public class RealTimeDataActivity extends AppCompatActivity {
         super.onDestroy();
         reading.set(false);
         if (readerThread != null) {
-            try { readerThread.interrupt();
-            } catch (Exception ignored) {}
+            try { readerThread.interrupt(); } catch (Exception ignored) {}
         }
         closeQuietly();
     }
-
 }

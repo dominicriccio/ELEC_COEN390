@@ -53,12 +53,7 @@
                 android:layout_height="wrap_content"
                 android:text="Accel g: --"
                 android:textSize="20sp" />
-            <TextView
-                android:id="@+id/tvAzMax60s"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Azimuth Max 60s: --"
-                android:textSize="20sp" />
+
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
