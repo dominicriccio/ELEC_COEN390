@@ -54,7 +54,7 @@
         android:layout_gravity="center"
         android:backgroundTint="#FE2C55"
         android:paddingHorizontal="24dp"
-        android:paddingVertical="dp"
+        android:paddingVertical="8dp"
         android:text="Close"
         android:textColor="@android:color/white"
         map:cornerRadius="24dp" />

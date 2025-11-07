@@ -203,7 +203,7 @@ public class AccountFragment extends Fragment {
         View btnEditProfile = view.findViewById(R.id.btn_edit_profile);
         if (btnEditProfile != null) {
             btnEditProfile.setOnClickListener(v -> {
-                Intent intent = new Intent(getActivity(), EditProfileActivity.class);
+                Intent intent = new Intent(getActivity(), SettingsActivity.class);
                 startActivity(intent);
             });
         }

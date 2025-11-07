@@ -1,6 +1,5 @@
 package com.example.meridian;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.appbar.MaterialToolbar;
 
@@ -13,7 +12,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class EditProfileActivity extends AppCompatActivity {
+public class SettingsActivity extends AppCompatActivity {
 
     private EditText etName, etSurname, etAddress, etPassword;
     private Button btnSave;

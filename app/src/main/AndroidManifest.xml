@@ -28,7 +28,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Meridian">
         <activity
-            android:name=".EditProfileActivity"
+            android:name=".SettingsActivity"
             android:exported="false" />
         <!--
              TODO: Before you run your application, you need a Google Maps API key.
