@@ -1,14 +1,12 @@
 package com.example.meridian;
 
-import static java.lang.Math.abs;
-import android.content.Context;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,7 +23,7 @@ import androidx.core.content.ContextCompat;
 import android.content.Intent;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -59,6 +57,19 @@ public class RealTimeDataActivity extends AppCompatActivity {
     // Stores az values for last 60 seconds
     private final ArrayList<Pair<Long, Double>> recentAz = new ArrayList<>();
 
+    // Firestore instance
+    private FirebaseFirestore db;
+
+    // Reporting control
+    private static final double REPORT_THRESHOLD_AZ = 1.25; // tune this
+    private static final long MIN_REPORT_INTERVAL_MS = 5_000L; // 5 seconds
+
+
+    private long lastReportTime = 0L;
+    private double lastReportLat = Double.NaN;
+    private double lastReportLon = Double.NaN;
+    private final AtomicBoolean reportingInProgress = new AtomicBoolean(false);
+
     private final ActivityResultLauncher<String> btConnectPermLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) connectToPairedDevice();
@@ -78,6 +89,9 @@ public class RealTimeDataActivity extends AppCompatActivity {
         tvLon = findViewById(R.id.tvLon);
         tvGz  = findViewById(R.id.tvGz);
         setStatus("Not connected");
+
+        // Init Firestore
+        db = FirebaseFirestore.getInstance();
 
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         if (btAdapter == null) {
@@ -266,13 +280,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
                     case "lon": lon = Double.valueOf(val); break;
                     case "az":  az  = Double.valueOf(val); break;
                 }
-
-                if(abs(az) > 2){
-                    Pothole pothole = new Pothole(lat, lon, az);
-                    FirestoreManager.addPotholeReport(pothole.getLocation(), pothole.getSeverity(), pothole.getDetectedBy());
-                    Toast.makeText(this, "Report sent (Hardware Report)", Toast.LENGTH_SHORT).show();
-                }
-
             } catch (NumberFormatException ignored) {}
         }
 
@@ -305,7 +312,67 @@ public class RealTimeDataActivity extends AppCompatActivity {
             }
 
             tvGz.setText(sb.toString());
+
+            // --- NEW: Try auto-reporting when az max exceeds threshold ---
+            tryAutoReportIfNeeded(fAzMax60s, fLat, fLon);
         });
+    }
+
+    /**
+     * Attempt to report a pothole automatically.
+     * Conditions:
+     *  - fAzMax60s > REPORT_THRESHOLD_AZ
+     *  - lat and lon available
+     *  - not reported too recently (MIN_REPORT_INTERVAL_MS)
+     */
+    private void tryAutoReportIfNeeded(Double fAzMax60s, Double fLat, Double fLon) {
+        if (fAzMax60s == null || fLat == null || fLon == null) return;
+        if (reportingInProgress.get()) return;
+
+        if (fAzMax60s < REPORT_THRESHOLD_AZ) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastReportTime < MIN_REPORT_INTERVAL_MS) {
+            Log.d("RT", "Skipping report: interval not passed");
+            return;
+        }
+
+
+        // Mark in-progress and perform the report asynchronously
+        reportingInProgress.set(true);
+        setStatus("Reporting pothole…");
+
+        Pothole pothole = new Pothole(fLat, fLon, fAzMax60s); // uses Pothole(double lat, double lon, double az)
+
+        // Add to Firestore
+        db.collection("potholes")
+                .add(pothole)
+                .addOnSuccessListener(docRef -> {
+                    // update the document with its ID (optional but helpful)
+                    String docId = docRef.getId();
+                    docRef.update("id", docId)
+                            .addOnCompleteListener(task -> {
+                                // update local tracking state
+                                lastReportTime = System.currentTimeMillis();
+                                lastReportLat = fLat;
+                                lastReportLon = fLon;
+                                reportingInProgress.set(false);
+                                ui.post(() -> {
+                                    Toast.makeText(RealTimeDataActivity.this,
+                                            "Pothole auto-reported (severity: " + pothole.getSeverity() + ")",
+                                            Toast.LENGTH_LONG).show();
+                                    setStatus("Reported");
+                                });
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("RT", "Failed to write pothole", e);
+                    reportingInProgress.set(false);
+                    ui.post(() -> {
+                        setStatus("Report failed");
+                        Toast.makeText(RealTimeDataActivity.this, "Auto-report failed", Toast.LENGTH_SHORT).show();
+                    });
+                });
     }
 
     private void closeQuietly() {
