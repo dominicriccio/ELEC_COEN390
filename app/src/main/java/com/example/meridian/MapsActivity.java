@@ -40,6 +40,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.maps.android.heatmaps.WeightedLatLng;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
@@ -49,6 +54,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FirebaseAuth mAuth;
     private boolean isAdmin = false;
     private List<Marker> potholeMarkers = new ArrayList<>();
+    private HeatmapTileProvider heatmapProvider;
+    private TileOverlay heatmapOverlay;
+    private final List<WeightedLatLng> heatmapPoints = new ArrayList<>();
 
     // A simple data class to hold all pothole information
     private static class PotholeData {
@@ -137,6 +145,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 binding.potholeDetailCard.setVisibility(View.GONE);
             }
         });
+
+        mMap.setOnCameraIdleListener(() -> {
+            float zoom = mMap.getCameraPosition().zoom;
+            if (heatmapOverlay != null) {
+                if (zoom < 14f) { // Zoomed out → show heatmap, hide pins
+                    heatmapOverlay.setVisible(true);
+                    for (Marker marker : potholeMarkers) marker.setVisible(false);
+                } else { // Zoomed in → show pins, hide heatmap
+                    heatmapOverlay.setVisible(false);
+                    for (Marker marker : potholeMarkers) marker.setVisible(true);
+                }
+            }
+        });
     }
 
     private void showPotholeDetailCard(PotholeData potholeData, Marker marker) {
@@ -168,7 +189,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (potholeMarkers != null && potholeData.followers.contains(currentUser.getUid())) {
                 starIcon.setImageResource(R.drawable.ic_star_filled); // A filled star icon
             } else {
-                starIcon.setImageResource(R.drawable.ic_star_border); // A bordered star icon
+                db.collection("potholes").document(potholeData.id).get()
+                        .addOnSuccessListener(doc -> {
+                            List<String> followers = (List<String>) doc.get("followers");
+                            if (followers != null && followers.contains(currentUser.getUid())) {
+                                starIcon.setImageResource(R.drawable.ic_star_filled);
+                                potholeData.followers = followers; // refresh local cache
+                            } else {
+                                starIcon.setImageResource(R.drawable.ic_star_border);
+                            }
+                        });
             }
 
             // The click listener now toggles the follow state
@@ -226,28 +256,99 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                         if (potholeData.location != null) {
                             LatLng potholeLocation = new LatLng(potholeData.location.getLatitude(), potholeData.location.getLongitude());
-
                             float markerColor;
+                            double weight;
+
                             if ("Severe".equalsIgnoreCase(potholeData.severity)) {
                                 markerColor = BitmapDescriptorFactory.HUE_RED;
+                                weight = 3.0;
                             } else if ("Moderate".equalsIgnoreCase(potholeData.severity)) {
                                 markerColor = BitmapDescriptorFactory.HUE_ORANGE;
+                                weight = 2.0;
                             } else {
                                 markerColor = BitmapDescriptorFactory.HUE_YELLOW;
+                                weight = 1.0;
                             }
 
-                            MarkerOptions markerOptions = new MarkerOptions()
-                                    .position(potholeLocation)
-                                    .icon(BitmapDescriptorFactory.defaultMarker(markerColor));
+                            heatmapPoints.add(new WeightedLatLng(potholeLocation, weight));
 
-                            Marker marker = mMap.addMarker(markerOptions);
-                            // Store the entire data object in the marker's tag
+                            Marker marker = mMap.addMarker(new MarkerOptions()
+                                    .position(potholeLocation)
+                                    .icon(BitmapDescriptorFactory.defaultMarker(markerColor)));
                             marker.setTag(potholeData);
+                            marker.setVisible(false); // hide by default
+                            potholeMarkers.add(marker);
                         }
                     }
+
+                    if (!heatmapPoints.isEmpty()) {
+                        if (heatmapProvider == null) {
+
+                            // --- Custom Heatmap Gradient ---
+                            // Yellow → Orange → Red → Dark Red
+                            int[] colors = {
+                                    android.graphics.Color.rgb(255, 255, 102),   // Yellow
+                                    android.graphics.Color.rgb(255, 165, 0),     // Orange
+                                    android.graphics.Color.rgb(255, 69, 0),      // Red-Orange
+                                    android.graphics.Color.rgb(178, 34, 34)      // Dark Red
+                            };
+
+                            // Intensity points for the gradient (0 → 1)
+                            float[] startPoints = {
+                                    0.2f, 0.5f, 0.7f, 1.0f
+                            };
+
+                            // Create custom gradient
+                            com.google.maps.android.heatmaps.Gradient gradient =
+                                    new com.google.maps.android.heatmaps.Gradient(colors, startPoints);
+
+                            // --- Build provider using custom gradient ---
+                            heatmapProvider = new HeatmapTileProvider.Builder()
+                                    .weightedData(heatmapPoints)
+                                    .gradient(gradient)
+                                    .radius(40)
+                                    .build();
+
+                            heatmapOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(heatmapProvider));
+                            heatmapOverlay.setVisible(true);
+
+                        } else {
+                            heatmapProvider.setWeightedData(heatmapPoints);
+                            heatmapOverlay.clearTileCache();
+                        }
+                    }
+
+                    mMap.setOnCameraMoveListener(() -> {
+                        float zoom = mMap.getCameraPosition().zoom;
+                        updateHeatmapAndPinsVisibility(zoom);
+                    });
+
+                    mMap.setOnCameraIdleListener(() -> {
+                        float zoom = mMap.getCameraPosition().zoom;
+                        updateHeatmapAndPinsVisibility(zoom);
+                    });
+
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to load potholes.", Toast.LENGTH_SHORT).show());
     }
+
+    private void updateHeatmapAndPinsVisibility(float zoom) {
+        if (heatmapOverlay == null) return;
+
+        // You can tweak this cutoff zoom level
+        float cutoffZoom = 13f;
+
+        boolean showPins = zoom >= cutoffZoom;
+
+        // Heatmap visible when zoomed out
+        heatmapOverlay.setVisible(!showPins);
+
+        // Show/hide pins based on zoom level
+        for (Marker marker : potholeMarkers) {
+            marker.setVisible(showPins);
+        }
+    }
+
 
     private void setupMapUI() {
         try {
