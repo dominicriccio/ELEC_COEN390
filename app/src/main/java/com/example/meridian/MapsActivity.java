@@ -335,17 +335,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void updateHeatmapAndPinsVisibility(float zoom) {
         if (heatmapOverlay == null) return;
 
-        // You can tweak this cutoff zoom level
-        float cutoffZoom = 13f;
+        float fadeStart = 12.5f;
+        float fadeEnd = 13.5f;
 
-        boolean showPins = zoom >= cutoffZoom;
+        float alpha = Math.min(1f, Math.max(0f, (zoom - fadeStart) / (fadeEnd - fadeStart)));
 
-        // Heatmap visible when zoomed out
-        heatmapOverlay.setVisible(!showPins);
+        boolean showHeatmap = alpha < 0.5f;
+
+        heatmapOverlay.setVisible(showHeatmap);
 
         // Show/hide pins based on zoom level
         for (Marker marker : potholeMarkers) {
-            marker.setVisible(showPins);
+            marker.setVisible(alpha > 0f);
+            marker.setAlpha(alpha);
         }
     }
 
