@@ -62,6 +62,9 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     implementation("com.google.maps.android:android-maps-utils:3.8.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.maps:google-maps-services:2.2.0")
+
 
 
 

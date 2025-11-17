@@ -1,6 +1,7 @@
 package com.example.meridian;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.Bundle;
@@ -21,6 +22,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
@@ -45,6 +47,23 @@ import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
+import androidx.core.content.ContextCompat;
+
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.DirectionsApi;
+import com.google.maps.GeoApiContext;
+import com.google.maps.model.DirectionsResult;
+import com.google.maps.model.TravelMode;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
@@ -54,9 +73,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FirebaseAuth mAuth;
     private boolean isAdmin = false;
     private List<Marker> potholeMarkers = new ArrayList<>();
+    private List<Marker> constructionMarkers = new ArrayList<>();
     private HeatmapTileProvider heatmapProvider;
     private TileOverlay heatmapOverlay;
     private final List<WeightedLatLng> heatmapPoints = new ArrayList<>();
+
+    private List<Polyline> constructionPolylines = new ArrayList<>();
+    private GeoApiContext geoApiContext = null;private final ExecutorService executor = Executors.newFixedThreadPool(5);
 
     // A simple data class to hold all pothole information
     private static class PotholeData {
@@ -89,6 +112,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        if (geoApiContext == null) {
+            geoApiContext = new GeoApiContext.Builder()
+                    .apiKey("AIzaSyAeFVAH93fX6qAXKazphjU-O1MfBqspPog") // <-- IMPORTANT: PASTE YOUR GOOGLE MAPS API KEY HERE
+                    .build();
+        }
 
         mAuth = FirebaseAuth.getInstance();
         checkUserRole();
@@ -122,22 +150,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    @SuppressLint("PotentialBehaviorOverride")
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
         loadPotholes();
+        loadConstructionSites();
         setupMapUI();
         focusOnUserLocation();
 
-        mMap.setOnMarkerClickListener(marker -> {
-            PotholeData potholeData = (PotholeData) marker.getTag();
-            if (potholeData != null) {
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
-                showPotholeDetailCard(potholeData, marker);
-            }
-            return true;
-        });
+        mMap.setOnCameraIdleListener(this::onCameraIdle);
 
         mMap.setOnMapClickListener(latLng -> {
             // Use the binding to access the card
@@ -146,18 +169,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        mMap.setOnCameraIdleListener(() -> {
-            float zoom = mMap.getCameraPosition().zoom;
-            if (heatmapOverlay != null) {
-                if (zoom < 14f) { // Zoomed out → show heatmap, hide pins
-                    heatmapOverlay.setVisible(true);
-                    for (Marker marker : potholeMarkers) marker.setVisible(false);
-                } else { // Zoomed in → show pins, hide heatmap
-                    heatmapOverlay.setVisible(false);
-                    for (Marker marker : potholeMarkers) marker.setVisible(true);
-                }
-            }
-        });
     }
 
     private void showPotholeDetailCard(PotholeData potholeData, Marker marker) {
@@ -318,16 +329,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                     }
 
-                    mMap.setOnCameraMoveListener(() -> {
-                        float zoom = mMap.getCameraPosition().zoom;
-                        updateHeatmapAndPinsVisibility(zoom);
-                    });
-
-                    mMap.setOnCameraIdleListener(() -> {
-                        float zoom = mMap.getCameraPosition().zoom;
-                        updateHeatmapAndPinsVisibility(zoom);
-                    });
-
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to load potholes.", Toast.LENGTH_SHORT).show());
     }
@@ -437,5 +438,126 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .delete()
                 .addOnSuccessListener(aVoid -> Toast.makeText(MapsActivity.this, "Pothole report deleted", Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e -> Toast.makeText(MapsActivity.this, "Failed to delete from database", Toast.LENGTH_SHORT).show());
+    }
+
+    private void loadConstructionSites() {
+        ConstructionDataManager dataManager = new ConstructionDataManager();
+        dataManager.fetchConstructionData(new ConstructionDataManager.OnDataLoadedListener() {
+            @Override
+            public void onDataLoaded(List<ConstructionSite> constructionSites) {
+                // Process each site in the background
+                for (ConstructionSite site : constructionSites) {
+                    // Use the executor to avoid blocking the main thread
+                    executor.submit(() -> processAndDrawHindrance(site));
+                }
+                // The Toast message can be shown immediately
+                Toast.makeText(MapsActivity.this, "Loading " + constructionSites.size() + " road hindrances...", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Toast.makeText(MapsActivity.this, "Failed to load road hindrance data.", Toast.LENGTH_SHORT).show();
+                Log.e("MapsActivity", "Construction data error", e);
+            }
+        });
+    }
+
+    private void processAndDrawHindrance(ConstructionSite site) {
+        String[] parts = site.description.split("\\s+entre\\s+");
+        if (parts.length != 2) return; // We need a start and end point
+
+        String street = parts[0];
+        String[] crossStreets = parts[1].split("\\s+et\\s+");
+        if (crossStreets.length != 2) return;
+
+        // Construct the origin and destination addresses for the API
+        String origin = street + " & " + crossStreets[0] + ", Montreal, QC";
+        String destination = street + " & " + crossStreets[1] + ", Montreal, QC";
+
+        try {
+            DirectionsResult result = DirectionsApi.newRequest(geoApiContext)
+                    .origin(origin)
+                    .destination(destination)
+                    .mode(TravelMode.DRIVING)
+                    .await();
+
+            if (result.routes != null && result.routes.length > 0) {
+                List<com.google.maps.model.LatLng> path = result.routes[0].overviewPolyline.decodePath();
+                List<LatLng> newPath = new ArrayList<>();
+
+                for (com.google.maps.model.LatLng point : path) {
+                    newPath.add(new LatLng(point.lat, point.lng));
+                }
+
+                // Switch back to the main thread to draw on the map
+                runOnUiThread(() -> {
+                    if (mMap != null) {
+                        Polyline polyline = mMap.addPolyline(new PolylineOptions()
+                                .addAll(newPath)
+                                .color(android.graphics.Color.RED)
+                                .width(15));
+                        polyline.setTag(site);
+
+                        // --- START OF FIX ---
+                        // DO NOT set visibility here. Let the camera listener handle it.
+                        // REMOVED: polyline.setVisible(mMap.getCameraPosition().zoom >= 15f);
+                        // --- END OF FIX ---
+
+                        constructionPolylines.add(polyline);
+
+                        // Manually trigger the listener once after adding a new line
+                        // to ensure its visibility is set correctly right away.
+                        onCameraIdle();
+                    }
+                });
+            }
+        } catch (Exception e) {
+            Log.e("Directions API", "Error getting directions for: " + site.description, e);
+        }
+    }
+
+    public void onCameraIdle() {
+        if (mMap == null) return; // Safety check
+
+        float zoom = mMap.getCameraPosition().zoom;
+
+        // --- START: Merged Heatmap/Pothole Logic ---
+        if (heatmapOverlay != null) {
+            // Use your advanced fading logic from updateHeatmapAndPinsVisibility
+            float fadeStart = 12.5f;
+            float fadeEnd = 13.5f;
+            float alpha = Math.min(1f, Math.max(0f, (zoom - fadeStart) / (fadeEnd - fadeStart)));
+
+            boolean showHeatmap = alpha < 0.5f;
+            heatmapOverlay.setVisible(showHeatmap);
+
+            for (Marker marker : potholeMarkers) {
+                // Pins become visible as heatmap fades out
+                marker.setVisible(alpha > 0f);
+                marker.setAlpha(alpha); // This creates a smooth fade-in/fade-out
+            }
+        }
+        // --- END: Merged Heatmap/Pothole Logic ---
+
+        // Logic for construction polylines (already correct)
+        if (constructionPolylines != null) {
+            boolean showPolylines = zoom >= 15f; // Only show when zoomed in
+            for (Polyline polyline : constructionPolylines) {
+                polyline.setVisible(showPolylines);
+            }
+        }
+    }
+
+    private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId) {
+        Drawable vectorDrawable = ContextCompat.getDrawable(context, vectorResId);
+        if (vectorDrawable == null) {
+            // Fallback to a default marker if the vector is not found
+            return BitmapDescriptorFactory.defaultMarker();
+        }
+        vectorDrawable.setBounds(0, 0, vectorDrawable.getIntrinsicWidth(), vectorDrawable.getIntrinsicHeight());
+        Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(), vectorDrawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        vectorDrawable.draw(canvas);
+        return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 }
