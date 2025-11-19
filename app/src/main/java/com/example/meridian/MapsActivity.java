@@ -442,35 +442,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void loadConstructionSites() {
         ConstructionDataManager dataManager = new ConstructionDataManager();
+        // Update the listener to expect a list of MergedConstructionSite objects
         dataManager.fetchConstructionData(new ConstructionDataManager.OnDataLoadedListener() {
             @Override
-            public void onDataLoaded(List<ConstructionSite> constructionSites) {
-                // Process each site in the background
-                for (ConstructionSite site : constructionSites) {
-                    // Use the executor to avoid blocking the main thread
+            public void onDataLoaded(List<ConstructionDataManager.MergedConstructionSite> sites) {
+                // The rest of this method remains the same
+                for (ConstructionDataManager.MergedConstructionSite site : sites) {
                     executor.submit(() -> processAndDrawHindrance(site));
                 }
-                // The Toast message can be shown immediately
-                Toast.makeText(MapsActivity.this, "Loading " + constructionSites.size() + " road hindrances...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MapsActivity.this, "Loading " + sites.size() + " blocked roads...", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onError(Exception e) {
-                Toast.makeText(MapsActivity.this, "Failed to load road hindrance data.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MapsActivity.this, "Failed to load construction data.", Toast.LENGTH_SHORT).show();
                 Log.e("MapsActivity", "Construction data error", e);
             }
         });
     }
 
-    private void processAndDrawHindrance(ConstructionSite site) {
+    private void processAndDrawHindrance(ConstructionDataManager.MergedConstructionSite site) {
+        // The parsing logic is now much simpler because the description is pre-formatted
         String[] parts = site.description.split("\\s+entre\\s+");
-        if (parts.length != 2) return; // We need a start and end point
+        if (parts.length != 2) {
+            Log.w("DirectionsAPI", "Skipping malformed description: " + site.description);
+            return; // We need a start and end point
+        }
 
         String street = parts[0];
         String[] crossStreets = parts[1].split("\\s+et\\s+");
-        if (crossStreets.length != 2) return;
+        if (crossStreets.length != 2) {
+            Log.w("DirectionsAPI", "Skipping malformed cross-streets: " + parts[1]);
+            return;
+        }
 
-        // Construct the origin and destination addresses for the API
+        // The rest of this method works exactly as before!
         String origin = street + " & " + crossStreets[0] + ", Montreal, QC";
         String destination = street + " & " + crossStreets[1] + ", Montreal, QC";
 
@@ -489,30 +495,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     newPath.add(new LatLng(point.lat, point.lng));
                 }
 
-                // Switch back to the main thread to draw on the map
                 runOnUiThread(() -> {
                     if (mMap != null) {
                         Polyline polyline = mMap.addPolyline(new PolylineOptions()
                                 .addAll(newPath)
                                 .color(android.graphics.Color.RED)
                                 .width(15));
-                        polyline.setTag(site);
 
-                        // --- START OF FIX ---
-                        // DO NOT set visibility here. Let the camera listener handle it.
-                        // REMOVED: polyline.setVisible(mMap.getCameraPosition().zoom >= 15f);
-                        // --- END OF FIX ---
+                        // Now you can tag the polyline with the rich, merged data (including dates!)
+                        polyline.setTag(site);
 
                         constructionPolylines.add(polyline);
 
-                        // Manually trigger the listener once after adding a new line
-                        // to ensure its visibility is set correctly right away.
+                        // Manually trigger the listener to set initial visibility correctly
                         onCameraIdle();
                     }
                 });
             }
         } catch (Exception e) {
-            Log.e("Directions API", "Error getting directions for: " + site.description, e);
+            Log.e("DirectionsAPI", "Error getting directions for: " + site.description, e);
         }
     }
 
@@ -537,11 +538,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 marker.setAlpha(alpha); // This creates a smooth fade-in/fade-out
             }
         }
-        // --- END: Merged Heatmap/Pothole Logic ---
 
-        // Logic for construction polylines (already correct)
         if (constructionPolylines != null) {
-            boolean showPolylines = zoom >= 15f; // Only show when zoomed in
+            boolean showPolylines = zoom >= 12f; // Only show when zoomed in
             for (Polyline polyline : constructionPolylines) {
                 polyline.setVisible(showPolylines);
             }
