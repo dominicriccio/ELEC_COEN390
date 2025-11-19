@@ -714,10 +714,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     );
 
                     addSingleClosureToMap(c);
+
+                    sendClosureNearbyNotifications(c);
+
                     cancelClosureDrawing();
                     loadAdminClosures();
                 });
     }
+
+    private void sendClosureNearbyNotifications(RoadClosureData closure) {
+
+        // Compute closure center
+        LatLng center = closure.points.get(closure.points.size() / 2);
+
+        db.collection("users").get()
+                .addOnSuccessListener(users -> {
+                    for (QueryDocumentSnapshot doc : users) {
+
+                        Double lat = doc.getDouble("lat");
+                        Double lng = doc.getDouble("lng");
+                        Double radius = doc.getDouble("radiusKm");  // user setting
+
+                        if (lat == null || lng == null || radius == null) continue;
+
+                        LatLng userLoc = new LatLng(lat, lng);
+
+                        double distance = SphericalUtil.computeDistanceBetween(center, userLoc) / 1000.0;
+
+                        if (distance <= radius) {
+                            Map<String, Object> notif = new HashMap<>();
+                            notif.put("userId", doc.getId());
+                            notif.put("title", "Road Closure Near You");
+                            notif.put("message", "A new construction road closure has been reported nearby.");
+                            notif.put("timestamp", FieldValue.serverTimestamp());
+                            notif.put("type", "closure_alert");
+                            notif.put("relatedId", closure.id);
+
+                            db.collection("notifications").add(notif);
+                        }
+                    }
+                });
+    }
+
 
 
     // ======================================================
@@ -1061,21 +1099,65 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void updatePotholeStatusInFirestore(String potholeId,
                                                 String newStatus,
                                                 Marker marker) {
-        db.collection("potholes").document(potholeId)
-                .update("status", newStatus)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this,
-                            "Status updated to " + newStatus, Toast.LENGTH_SHORT).show();
-                    PotholeData data = (PotholeData) marker.getTag();
-                    if (data != null) {
-                        data.status = newStatus;
-                        marker.setTag(data);
-                        binding.infoWindowLayout.tvStatus.setText("Status: " + newStatus);
+
+        db.collection("potholes")
+                .document(potholeId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists()) return;
+
+                    String oldStatus = snapshot.getString("status");
+
+                    // Only notify if the status ACTUALLY changed
+                    if (oldStatus != null && oldStatus.equals(newStatus)) {
+                        return;
                     }
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this,
-                                "Failed to update status", Toast.LENGTH_SHORT).show());
+
+                    // Now update
+                    snapshot.getReference()
+                            .update("status", newStatus)
+                            .addOnSuccessListener(aVoid -> {
+
+                                Toast.makeText(this,
+                                        "Status updated to " + newStatus, Toast.LENGTH_SHORT).show();
+
+                                PotholeData data = (PotholeData) marker.getTag();
+
+                                if (data != null) {
+                                    data.status = newStatus;
+                                    marker.setTag(data);
+                                    binding.infoWindowLayout.tvStatus.setText("Status: " + newStatus);
+                                }
+
+                                // NOW safe to notify followers
+                                notifyPotholeFollowers(potholeId, newStatus);
+                            });
+                });
+    }
+
+
+    private void notifyPotholeFollowers(String potholeId, String newStatus) {
+
+        db.collection("potholes").document(potholeId).get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) return;
+
+                    List<String> followers = (List<String>) doc.get("followers");
+                    if (followers == null || followers.isEmpty()) return;
+
+                    for (String userId : followers) {
+                        Map<String, Object> notif = new HashMap<>();
+                        notif.put("type", "pothole_update");
+                        notif.put("potholeId", potholeId);
+                        notif.put("newStatus", newStatus);
+                        notif.put("timestamp", com.google.firebase.Timestamp.now());
+
+                        db.collection("users")
+                                .document(userId)
+                                .collection("notifications")
+                                .add(notif);
+                    }
+                });
     }
 
     private void deletePotholeFromFirestore(String potholeId) {
