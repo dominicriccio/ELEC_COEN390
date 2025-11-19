@@ -3,10 +3,13 @@ package com.example.meridian;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
@@ -24,7 +27,7 @@ public class RegisterActivity extends AppCompatActivity {
     private Button btnRegister, btnBack;
     private ProgressBar progressBar;
     private FirebaseAuth mAuth;
-
+    private String vehicle_type; private Spinner vehicleType;
     private static final String ADMIN_PASSWORD = "Admin123";
 
     @Override
@@ -48,6 +51,25 @@ public class RegisterActivity extends AppCompatActivity {
         btnRegister.setOnClickListener(v -> registerUser());
         cbRegisterAsAdmin = findViewById(R.id.cb_register_as_admin);
         etAdminPassword = findViewById(R.id.et_admin_password);
+        Spinner mySpinner = findViewById(R.id.vehicleType);
+        ArrayAdapter<CharSequence> myAdapter = ArrayAdapter.createFromResource(
+                this,R.array.vehicle_type_array, android.R.layout.simple_spinner_item);
+
+        myAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mySpinner.setAdapter(myAdapter);
+
+        mySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                vehicle_type = parent.getItemAtPosition(position).toString();
+                 // Update the global variable
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                Toast.makeText(RegisterActivity.this, "Please select a vehicle type", Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
 
         cbRegisterAsAdmin.setOnCheckedChangeListener((buttonView, isChecked) -> {
             etAdminPassword.setVisibility(isChecked ? View.VISIBLE : View.GONE);
@@ -77,6 +99,11 @@ public class RegisterActivity extends AppCompatActivity {
         if (!password.equals(confirmPassword)) {
             Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        if (TextUtils.isEmpty(vehicle_type) || vehicle_type.equals(getResources().getStringArray(R.array.vehicle_type_array)[0])) {
+            Toast.makeText(this, "Please select a vehicle type", Toast.LENGTH_SHORT).show();
+            return; // Stop the registration
         }
 
         final String role;
@@ -113,6 +140,8 @@ public class RegisterActivity extends AppCompatActivity {
                             userMap.put("address", address);
                             userMap.put("email", email);
                             userMap.put("role", role);
+
+                            userMap.put("vehicle_type", vehicle_type); 
 
                             FirestoreManager.getUsersCollection().document(userId)
                                     .set(userMap)
