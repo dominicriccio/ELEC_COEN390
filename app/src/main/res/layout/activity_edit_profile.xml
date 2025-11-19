@@ -69,6 +69,25 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="28dp" />
 
+            <TextView
+                android:id="@+id/tv_vehicle_label"
+                android:layout_width="200dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Select Vehicle Type:"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Spinner Positioned Below Vehicle Label -->
+            <Spinner
+                android:id="@+id/vehicleType"
+                android:layout_width="200dp"
+                android:layout_height="48dp"
+                android:background="@android:drawable/btn_dropdown"
+                android:spinnerMode="dropdown"
+                android:layout_marginBottom="28dp" />
+
+
             <!-- Save Button -->
             <Button
                 android:id="@+id/btn_save_profile"
