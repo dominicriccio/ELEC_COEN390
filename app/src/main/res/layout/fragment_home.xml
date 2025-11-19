@@ -45,7 +45,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.153">
 
-        <!-- empty container where the map fragment will be placed -->
         <FrameLayout
             android:id="@+id/mapFragment"
             android:layout_width="match_parent"
@@ -151,6 +150,7 @@
                 android:id="@+id/lowSeverity"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
+                android:buttonTint="@color/radio_button_tint"
                 android:text="Minor"
                 android:textAlignment="viewStart"
                 android:textColor="#161616" />
@@ -159,6 +159,7 @@
                 android:id="@+id/mediumSeverity"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
+                android:buttonTint="@color/radio_button_tint"
                 android:text="Moderate"
                 android:textColor="#161616" />
 
@@ -166,6 +167,7 @@
                 android:id="@+id/highSeverity"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
+                android:buttonTint="@color/radio_button_tint"
                 android:text="Severe"
                 android:textColor="#161616" />
         </RadioGroup>

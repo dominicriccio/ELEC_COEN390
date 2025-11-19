@@ -28,4 +28,27 @@
         app:srcCompat="@drawable/ic_arrow_forward"
         map:backgroundTint="#FE2C55" />
 
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/pothole_detail_card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="8dp"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include
+                android:id="@+id/info_window_layout"
+                layout="@layout/info_window"/>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
 </RelativeLayout>

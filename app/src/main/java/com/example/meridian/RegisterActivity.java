@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
@@ -18,10 +19,13 @@ import java.util.Map;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    private EditText etName, etSurname, etAddress, etEmail, etPassword, etConfirmPassword;
+    private EditText etName, etSurname, etAddress, etEmail, etPassword, etConfirmPassword,  etAdminPassword;
+    private CheckBox cbRegisterAsAdmin;
     private Button btnRegister, btnBack;
     private ProgressBar progressBar;
     private FirebaseAuth mAuth;
+
+    private static final String ADMIN_PASSWORD = "Admin123";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,7 +46,17 @@ public class RegisterActivity extends AppCompatActivity {
         btnBack = findViewById(R.id.btn_register_back);
         btnBack.setOnClickListener(v -> finish());
         btnRegister.setOnClickListener(v -> registerUser());
+        cbRegisterAsAdmin = findViewById(R.id.cb_register_as_admin);
+        etAdminPassword = findViewById(R.id.et_admin_password);
+
+        cbRegisterAsAdmin.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            etAdminPassword.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        btnRegister.setOnClickListener(v -> registerUser());
+        btnBack.setOnClickListener(v -> finish());
     }
+
 
 
     private void registerUser() {
@@ -65,6 +79,21 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
+        final String role;
+
+        if (cbRegisterAsAdmin.isChecked()) {
+            String adminPassword = etAdminPassword.getText().toString().trim();
+            if (adminPassword.equals(ADMIN_PASSWORD)) {
+                role = "admin";
+            } else {
+                Toast.makeText(this, "Incorrect Admin Password.", Toast.LENGTH_SHORT).show();
+                return; // Stop the registration
+            }
+        } else {
+            role = "user"; // Default role
+        }
+
+
         progressBar.setVisibility(View.VISIBLE);
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
@@ -83,8 +112,8 @@ public class RegisterActivity extends AppCompatActivity {
                             userMap.put("surname", surname);
                             userMap.put("address", address);
                             userMap.put("email", email);
+                            userMap.put("role", role);
 
-                            // **THE FIX**: Use your existing FirestoreManager.getUsersCollection()
                             FirestoreManager.getUsersCollection().document(userId)
                                     .set(userMap)
                                     .addOnSuccessListener(aVoid -> {

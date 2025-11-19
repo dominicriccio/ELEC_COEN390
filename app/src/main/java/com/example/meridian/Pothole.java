@@ -36,13 +36,25 @@ public class Pothole {
     }
 
     public Pothole(double lat, double lon, double az) {
-        this.id = null; //ID will be set by Firestore
-        this.severity = (abs(az) > 8) ? "High" : (abs(az) > 4) ? "Moderate" : "Low";
+        this.id = null; // ID will be set by Firestore
+
+        double a = Math.abs(az);
+        if (a >= 4) {
+            this.severity = "Severe";
+        } else if (a < 4 && a >= 2) {
+            this.severity = "Moderate";
+        } else if (a < 2 && a >= 1.25) {
+            this.severity = "Minor";
+        } else {
+            this.severity = "Negligible";
+        }
+
         this.status = "Reported";
-        this.detectedBy = "AppUser";
+        this.detectedBy = "Hardware Device";
         this.timestamp = Timestamp.now();
         this.location = new GeoPoint(lat, lon);
     }
+
 
     // -----------------------
     // Firestore field mapping

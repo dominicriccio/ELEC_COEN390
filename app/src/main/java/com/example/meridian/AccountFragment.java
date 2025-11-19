@@ -2,7 +2,7 @@ package com.example.meridian;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log; // FIX: Use the correct android.util.Log
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,12 +17,13 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.firestore.Query;
+import com.google.android.material.chip.Chip;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.text.SimpleDateFormat;
@@ -60,9 +61,24 @@ public class AccountFragment extends Fragment {
         // Inflate the views but do not attach them to any parent yet
         loggedInView = inflater.inflate(R.layout.fragment_account_logged_in, rootContainer, false);
         loggedOutView = inflater.inflate(R.layout.fragment_account_logged_out, rootContainer, false);
+
         reportsRecyclerView = loggedInView.findViewById(R.id.rv_reports);
         reportsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        reportsAdapter = new ReportsAdapter(userReports);
+
+        reportsAdapter = new ReportsAdapter(userReports, report -> {
+            ReportFragment dialog = new ReportFragment();
+
+            Bundle args = new Bundle();
+            args.putString("id", report.id);
+            args.putString("status", report.status);
+            args.putString("severity", report.severity);
+            args.putDouble("latitude", report.getLatitude());
+            args.putDouble("longitude", report.getLongitude());
+            args.putString("timestamp", report.timestamp != null ? report.timestamp.toDate().toString() : "");
+            dialog.setArguments(args);
+
+            dialog.show(getParentFragmentManager(), "reportDetails");
+        });
         reportsRecyclerView.setAdapter(reportsAdapter);
 
         // Setup the interactive elements for each view
@@ -76,54 +92,51 @@ public class AccountFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // This is the ideal place to update the view based on authentication state
-        updateView();
+        updateView(); // Refresh state each time fragment resumes
     }
 
     private void updateView() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-
-        // Always start by clearing the container to prevent view stacking
-        rootContainer.removeAllViews();
+        rootContainer.removeAllViews(); // Prevent view stacking
 
         if (currentUser != null) {
-            // User is logged in, add the correct view
             rootContainer.addView(loggedInView);
-            // And load their specific data
             loadUserDetails(currentUser.getUid());
             loadUserReports(currentUser.getUid());
         } else {
-            // User is logged out, add the other view
             rootContainer.addView(loggedOutView);
         }
     }
 
     private void loadUserDetails(String userId) {
-        // Sanity check for the user ID
         if (userId == null || userId.isEmpty()) {
-            Log.e(TAG, "loadUserDetails was called with a null or empty userId.");
+            Log.e(TAG, "loadUserDetails called with null/empty userId.");
             return;
         }
 
         db.collection("users").document(userId).get()
                 .addOnSuccessListener(document -> {
                     if (document.exists()) {
-                        Log.d(TAG, "User document found for UID: " + userId);
-                        // Find the TextViews within the currently attached loggedInView
                         TextView tvFullName = loggedInView.findViewById(R.id.tv_user_full_name);
                         TextView tvAddress = loggedInView.findViewById(R.id.tv_user_address);
                         TextView tvMemberSince = loggedInView.findViewById(R.id.tv_member_since);
+                        Chip adminBadge = loggedInView.findViewById(R.id.chip_admin_badge);
 
-                        // Safely extract data
+
                         String name = document.getString("name");
                         String surname = document.getString("surname");
                         String address = document.getString("address");
+                        String role = document.getString("role");
 
-                        // Populate the views
                         tvFullName.setText("Name: " + (name != null ? name : "") + " " + (surname != null ? surname : ""));
                         tvAddress.setText("Address: " + (address != null ? address : "Not Provided"));
 
-                        // Get creation date from auth metadata
+                        if ("admin".equals(role)) {
+                            adminBadge.setVisibility(View.VISIBLE); // Show the badge for admins
+                        } else {
+                            adminBadge.setVisibility(View.GONE);  // Hide it for everyone else
+                        }
+
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null && user.getMetadata() != null) {
                             long creationTimestamp = user.getMetadata().getCreationTimestamp();
@@ -144,7 +157,7 @@ public class AccountFragment extends Fragment {
     private void loadUserReports(String userId) {
         db.collection("potholes")
                 .whereEqualTo("detectedBy", userId)
-                .orderBy("timestamp", Query.Direction.DESCENDING) // Show newest first
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     userReports.clear();
@@ -155,10 +168,16 @@ public class AccountFragment extends Fragment {
                             String id = document.getId();
                             String status = document.getString("status");
                             Timestamp timestamp = document.getTimestamp("timestamp");
-                            userReports.add(new PotholeReport(id, status, timestamp));
+                            String severity = document.getString("severity");
+                            GeoPoint location = document.getGeoPoint("location");
+
+                            userReports.add(new PotholeReport(id, status, severity, timestamp, location));
+
+                            Log.d(TAG, "Loaded pothole " + id + " at " +
+                                    (location != null ? location.getLatitude() + ", " + location.getLongitude() : "null"));
                         }
                     }
-                    reportsAdapter.notifyDataSetChanged(); // Refresh the list
+                    reportsAdapter.notifyDataSetChanged();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading user reports", e);
@@ -178,19 +197,39 @@ public class AccountFragment extends Fragment {
         btnLogout.setOnClickListener(v -> {
             mAuth.signOut();
             Toast.makeText(getContext(), "Logged out", Toast.LENGTH_SHORT).show();
-            updateView(); // Refresh the UI to show the logged-out state
+            updateView();
         });
+        //settings
+        View btnEditProfile = view.findViewById(R.id.btn_edit_profile);
+        if (btnEditProfile != null) {
+            btnEditProfile.setOnClickListener(v -> {
+                Intent intent = new Intent(getActivity(), SettingsActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private static class PotholeReport {
         String id;
         String status;
+        String severity;
         Timestamp timestamp;
+        GeoPoint location;
 
-        PotholeReport(String id, String status, Timestamp timestamp) {
+        PotholeReport(String id, String status, String severity, Timestamp timestamp, GeoPoint location) {
             this.id = id;
             this.status = status;
+            this.severity = severity;
             this.timestamp = timestamp;
+            this.location = location;
+        }
+
+        double getLatitude() {
+            return location != null ? location.getLatitude() : 0.0;
+        }
+
+        double getLongitude() {
+            return location != null ? location.getLongitude() : 0.0;
         }
     }
 
@@ -205,11 +244,18 @@ public class AccountFragment extends Fragment {
         }
     }
 
-    private class ReportsAdapter extends RecyclerView.Adapter<ReportViewHolder> {
-        private final List<PotholeReport> reports;
+    private static class ReportsAdapter extends RecyclerView.Adapter<ReportViewHolder> {
 
-        ReportsAdapter(List<PotholeReport> reports) {
+        public interface OnReportClickListener {
+            void onReportClick(PotholeReport report);
+        }
+
+        private final List<PotholeReport> reports;
+        private final OnReportClickListener listener;
+
+        ReportsAdapter(List<PotholeReport> reports, OnReportClickListener listener) {
             this.reports = reports;
+            this.listener = listener;
         }
 
         @NonNull
@@ -235,11 +281,16 @@ public class AccountFragment extends Fragment {
             holder.tvReportStatus.setText(
                     String.format(Locale.getDefault(), "Status: %s (%dd)", report.status, daysAgo)
             );
+
+            holder.itemView.setOnClickListener(v -> {
+                if (listener != null) listener.onReportClick(report);
+            });
         }
 
         @Override
         public int getItemCount() {
             return reports.size();
         }
+
     }
 }
