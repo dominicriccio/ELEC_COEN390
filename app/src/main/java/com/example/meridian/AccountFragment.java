@@ -119,6 +119,7 @@ public class AccountFragment extends Fragment {
                     if (document.exists()) {
                         TextView tvFullName = loggedInView.findViewById(R.id.tv_user_full_name);
                         TextView tvAddress = loggedInView.findViewById(R.id.tv_user_address);
+                        TextView tvVehicle = loggedInView.findViewById(R.id.tv_user_vehicle);
                         TextView tvMemberSince = loggedInView.findViewById(R.id.tv_member_since);
                         Chip adminBadge = loggedInView.findViewById(R.id.chip_admin_badge);
 
@@ -127,9 +128,14 @@ public class AccountFragment extends Fragment {
                         String surname = document.getString("surname");
                         String address = document.getString("address");
                         String role = document.getString("role");
+                        String vehicle = document.getString("vehicle_type");
 
                         tvFullName.setText("Name: " + (name != null ? name : "") + " " + (surname != null ? surname : ""));
                         tvAddress.setText("Address: " + (address != null ? address : "Not Provided"));
+
+                        if (tvVehicle!= null) {
+                            tvVehicle.setText("Vehicle: " + (vehicle != null ? vehicle : "Not Provided"));
+                        }
 
                         if ("admin".equals(role)) {
                             adminBadge.setVisibility(View.VISIBLE); // Show the badge for admins
