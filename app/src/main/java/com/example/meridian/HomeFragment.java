@@ -44,14 +44,19 @@ import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.firebase.Firebase;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     private static final String TAG = "HomeFragment";
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db; //Firestore instance
     private FragmentHomeBinding binding; // Use View Binding for the fragment
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
@@ -85,6 +90,8 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         super.onViewCreated(view, savedInstanceState);
 
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance(); //initialize
+
         initializePlacesApi();
         setupCustomSearch();
         setupMapFragment();
@@ -115,20 +122,46 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             return;
         }
 
+        db.collection("users").document(detectedBy).get().addOnSuccessListener(documentSnapshot -> {
+            String vehicleType = "unknown";
+
+            if (documentSnapshot.exists()) {
+                if (documentSnapshot.contains("vehicle_type")) {
+                    vehicleType = documentSnapshot.getString("vehicle_type");
+                } else if (documentSnapshot.contains("vehicleType")) {
+                    vehicleType = documentSnapshot.getString("vehicleType");
+                }
+            }
+            if (vehicleType == null) vehicleType = "unknown";
+            finalizeReport(detectedBy, vehicleType);
+        }).addOnFailureListener(e -> {
+            Toast.makeText(getContext(), "Failed to fetch user data", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Error fetching user data", e);
+            finalizeReport(detectedBy, "Unknown");
+        });
+    }
+
+    private void finalizeReport(String detectedBy, String vehicleType){
+
         // 1. Prefer location selected on the map
         if (selectedLocation != null) {
             GeoPoint geoPoint = new GeoPoint(selectedLocation.latitude, selectedLocation.longitude);
-            FirestoreManager.addPotholeReport(geoPoint, selectedSeverity, detectedBy);
+            uploadToFirestore(geoPoint, selectedSeverity, detectedBy, vehicleType);
             Toast.makeText(getContext(), "Report sent (selected location)", Toast.LENGTH_SHORT).show();
             resetUI();
         }
         // 2. Fallback to current GPS location
         else {
+
+            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                return;
+            }
             fusedLocationClient.getLastLocation()
                     .addOnSuccessListener(location -> {
                         if (location != null) {
                             GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-                            FirestoreManager.addPotholeReport(geoPoint, selectedSeverity, detectedBy);
+                            uploadToFirestore(geoPoint, selectedSeverity, detectedBy, vehicleType);
                             Toast.makeText(getContext(), "Report sent (current location)", Toast.LENGTH_SHORT).show();
                             resetUI();
                         } else {
@@ -136,6 +169,27 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
                         }
                     });
         }
+    }
+
+    private void uploadToFirestore(GeoPoint location, String severity, String detectedBy, String vehicleType) {
+        Map<String, Object> report = new HashMap<>();
+        report.put("location", location);
+        report.put("severity", severity);
+        report.put("detectedBy", detectedBy);
+        report.put("status", "Reported");
+        report.put("timestamp", FieldValue.serverTimestamp());
+        report.put("vehicle_type", vehicleType);
+
+        db.collection("potholes")
+                .add(report)
+                .addOnSuccessListener(documentReference -> {
+                    Toast.makeText(getContext(), "Report sent!", Toast.LENGTH_SHORT).show();
+                    resetUI();
+                })
+                .addOnFailureListener ( e -> {
+                    Toast.makeText(getContext(), "Failed to send report: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error adding document", e);
+                });
     }
 
     private void resetUI() {
