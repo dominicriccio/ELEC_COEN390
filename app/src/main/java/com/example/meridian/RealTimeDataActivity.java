@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -20,9 +19,10 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import android.content.Intent;
+import androidx.core.util.Pair;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.InputStream;
@@ -32,8 +32,6 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import androidx.core.util.Pair;
 
 public class RealTimeDataActivity extends AppCompatActivity {
 
@@ -59,15 +57,13 @@ public class RealTimeDataActivity extends AppCompatActivity {
 
     // Firestore instance
     private FirebaseFirestore db;
+    private FirebaseAuth mAuth; // Added Auth instance
 
     // Reporting control
     private static final double REPORT_THRESHOLD_AZ = 1.25; // tune this
     private static final long MIN_REPORT_INTERVAL_MS = 5_000L; // 5 seconds
 
-
     private long lastReportTime = 0L;
-    private double lastReportLat = Double.NaN;
-    private double lastReportLon = Double.NaN;
     private final AtomicBoolean reportingInProgress = new AtomicBoolean(false);
 
     private final ActivityResultLauncher<String> btConnectPermLauncher =
@@ -90,8 +86,9 @@ public class RealTimeDataActivity extends AppCompatActivity {
         tvGz  = findViewById(R.id.tvGz);
         setStatus("Not connected");
 
-        // Init Firestore
+        // Init Firestore & Auth
         db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         if (btAdapter == null) {
@@ -156,7 +153,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
                 inStr  = btSocket.getInputStream();
                 outStr = btSocket.getOutputStream();
 
-                // Optional: send handshake if device expects it
                 try {
                     outStr.write("START\n".getBytes());
                     outStr.flush();
@@ -283,7 +279,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
             } catch (NumberFormatException ignored) {}
         }
 
-        // Track max az over last 60 seconds
         double azMax60s = 0;
         long now = System.currentTimeMillis();
         if (az != null) recentAz.add(new Pair<>(now, az));
@@ -291,7 +286,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
         Iterator<Pair<Long, Double>> iter = recentAz.iterator();
         while (iter.hasNext()) {
             Pair<Long, Double> p = iter.next();
-            if (p.first < now - 60_000) iter.remove(); // remove older than 60s
+            if (p.first < now - 60_000) iter.remove();
             else if (p.second > azMax60s) azMax60s = p.second;
         }
 
@@ -313,17 +308,13 @@ public class RealTimeDataActivity extends AppCompatActivity {
 
             tvGz.setText(sb.toString());
 
-            // --- NEW: Try auto-reporting when az max exceeds threshold ---
             tryAutoReportIfNeeded(fAzMax60s, fLat, fLon);
         });
     }
 
     /**
      * Attempt to report a pothole automatically.
-     * Conditions:
-     *  - fAzMax60s > REPORT_THRESHOLD_AZ
-     *  - lat and lon available
-     *  - not reported too recently (MIN_REPORT_INTERVAL_MS)
+     * UPDATED: Now fetches user's vehicle type before saving.
      */
     private void tryAutoReportIfNeeded(Double fAzMax60s, Double fLat, Double fLon) {
         if (fAzMax60s == null || fLat == null || fLon == null) return;
@@ -337,29 +328,54 @@ public class RealTimeDataActivity extends AppCompatActivity {
             return;
         }
 
-
-        // Mark in-progress and perform the report asynchronously
         reportingInProgress.set(true);
+        setStatus("Checking vehicle info…");
+
+        // Get Current User ID
+        if (mAuth.getCurrentUser() == null) {
+            reportingInProgress.set(false);
+            return;
+        }
+        String userId = mAuth.getCurrentUser().getUid();
+
+        // Fetch User Profile to get Vehicle Type
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    String myVehicleType = "Unknown";
+                    if (documentSnapshot.exists() && documentSnapshot.contains("vehicle_type")) {
+                        myVehicleType = documentSnapshot.getString("vehicle_type");
+                    }
+
+                    // Create the Pothole with the vehicle type
+                    Pothole pothole = new Pothole(fLat, fLon, fAzMax60s);
+                    pothole.setVehicleType(myVehicleType);
+                    pothole.setDetectedBy(userId); // Ensure detectedBy is set to real user ID
+
+                    uploadPothole(pothole, fLat, fLon);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("RT", "Failed to fetch user vehicle", e);
+                    // If fetch fails, upload anyway with "Unknown" (or default null)
+                    Pothole pothole = new Pothole(fLat, fLon, fAzMax60s);
+                    pothole.setDetectedBy(userId);
+                    uploadPothole(pothole, fLat, fLon);
+                });
+    }
+
+    private void uploadPothole(Pothole pothole, Double fLat, Double fLon) {
         setStatus("Reporting pothole…");
 
-        Pothole pothole = new Pothole(fLat, fLon, fAzMax60s); // uses Pothole(double lat, double lon, double az)
-
-        // Add to Firestore
         db.collection("potholes")
                 .add(pothole)
                 .addOnSuccessListener(docRef -> {
-                    // update the document with its ID (optional but helpful)
                     String docId = docRef.getId();
                     docRef.update("id", docId)
                             .addOnCompleteListener(task -> {
-                                // update local tracking state
                                 lastReportTime = System.currentTimeMillis();
-                                lastReportLat = fLat;
-                                lastReportLon = fLon;
                                 reportingInProgress.set(false);
                                 ui.post(() -> {
                                     Toast.makeText(RealTimeDataActivity.this,
-                                            "Pothole auto-reported (severity: " + pothole.getSeverity() + ")",
+                                            "Pothole auto-reported (" + pothole.getVehicleType() + ")",
                                             Toast.LENGTH_LONG).show();
                                     setStatus("Reported");
                                 });
