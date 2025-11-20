@@ -44,11 +44,15 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
         String status = "Unknown";
         String severity = "Unknown";
         String formattedDate = "Unknown";
+        String vehicleType = "Unknown";
 
         if (getArguments() != null) {
             id = getArguments().getString("id", "N/A");
             status = getArguments().getString("status", "Unknown");
             severity = getArguments().getString("severity", "Unknown");
+
+            vehicleType = getArguments().getString("vehicle_type", "Unknown");
+
 
             // ✅ Support BOTH long timestamp and string timestamp
             long tsMillis = getArguments().getLong("timestampMillis", 0L);
@@ -69,15 +73,14 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
                     formattedDate = timestampString; // fallback
                 }
             }
-
             latitude = getArguments().getDouble("latitude", 0d);
             longitude = getArguments().getDouble("longitude", 0d);
         }
 
         tvDetails.setText(String.format(
                 Locale.getDefault(),
-                "ID: %s\nStatus: %s\nSeverity: %s\nReported on: %s",
-                id, status, severity, formattedDate
+                "ID: %s\nStatus: %s\nSeverity:%s\nVehicle: %s\nReported on: %s",
+                id, status, severity,vehicleType, formattedDate
         ));
 
         mapView.onCreate(savedInstanceState);
