@@ -1,20 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/notifications_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="12dp"
     tools:context=".NotificationsFragment">
 
+    <!-- EMPTY STATE (Shown only when no notifications exist) -->
     <TextView
-        android:id="@+id/notification_text"
-        android:layout_width="wrap_content"
+        android:id="@+id/tv_empty_notifications"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Notification Page"
-        android:textSize="24sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:text="No notifications yet"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingTop="40dp"
+        android:visibility="gone"
+        android:textColor="#888" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- LIST OF NOTIFICATIONS -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_notifications"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="8dp" />
+
+</FrameLayout>
