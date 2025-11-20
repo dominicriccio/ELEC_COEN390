@@ -6,8 +6,12 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,6 +43,8 @@ public class TrackingFragment extends Fragment {
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private ListView listView;
+    private Spinner vehicleFilterSpinner;
+    private LinearLayout filterContainer;  private boolean isAdmin = false;
     private final List<Pothole> potholeList = new ArrayList<>();
     private final Set<String> potholeIds = new HashSet<>();
     private PotholeAdapter adapter;
@@ -52,6 +58,8 @@ public class TrackingFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_tracking, container, false);
 
         listView = view.findViewById(R.id.listView);
+        vehicleFilterSpinner = view.findViewById(R.id.spinner_vehicle_filter);
+
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
@@ -81,9 +89,99 @@ public class TrackingFragment extends Fragment {
             startActivity(intent);
         });
 
-        loadPersonalizedPotholes();
+        checkUserRoleAndSetupUI();
+
+        //loadPersonalizedPotholes();
         return view;
     }
+
+    private void checkUserRoleAndSetupUI() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(requireContext(), "Please log in to see tracked potholes.", Toast.LENGTH_LONG).show();
+            return; }
+
+        db.collection("users").document(currentUser.getUid()).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                String role = documentSnapshot.getString("role");
+                if (role != null && role.equals("admin")) {
+                    isAdmin = true;
+                    setupAdminFilter();
+                }
+                else {
+                    isAdmin = false;
+                    if (vehicleFilterSpinner != null) {
+                        vehicleFilterSpinner.setVisibility(View.GONE);
+                    }
+                    loadPersonalizedPotholes();
+
+                }
+            }
+        });
+    }
+
+    private void setupAdminFilter() {
+        if (vehicleFilterSpinner == null) {
+            loadAllPotholes(null);
+            return;
+        }
+        vehicleFilterSpinner.setVisibility(View.VISIBLE);
+
+        String [] filterOptions = {"All vehicles", "Bicycle", "Sedan", "SUV", "Pickup Truck" };
+
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_spinner_item, filterOptions);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        vehicleFilterSpinner.setAdapter(spinnerAdapter);
+
+        vehicleFilterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selected = filterOptions[position];
+                if (selected.equals("All vehicles") ){
+                    loadAllPotholes(null);
+                }
+                else{
+                    loadAllPotholes(selected);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+    }
+
+    private void loadAllPotholes(@Nullable String vehicleTypeFilter) {
+        com.google.firebase.firestore.Query query = db.collection("potholes");
+        if (vehicleTypeFilter != null) {
+            query = query.whereEqualTo("vehicleType", vehicleTypeFilter);
+        }
+
+        query.get().addOnSuccessListener(queryDocumentSnapshots -> {
+            potholeList.clear();
+            potholeIds.clear();
+
+            for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                addUniquePothole(doc);
+            }
+
+            potholeList.sort((a,b) -> {
+                if (a.getTimestamp() == null || b.getTimestamp() == null) return 0;
+                return b.getTimestamp().compareTo(a.getTimestamp());
+            });
+
+            adapter.notifyDataSetChanged();
+
+            if (potholeList.isEmpty()) {
+                Toast.makeText(requireContext(), "No potholes found.", Toast.LENGTH_SHORT).show();
+            }
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error loading all potholes", e);
+            Toast.makeText(requireContext(), "Failed to load potholes.", Toast.LENGTH_SHORT).show();
+        });
+    }
+
 
     private void loadPersonalizedPotholes() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -135,6 +233,9 @@ public class TrackingFragment extends Fragment {
         Pothole pothole = doc.toObject(Pothole.class);
         if (pothole != null) {
             pothole.setId(doc.getId());
+            if ((pothole.getVehicleType() == null) && doc.contains("vehicle_type")) {
+                pothole.setVehicleType(doc.getString("vehicle_type"));
+            }
             potholeList.add(pothole);
             potholeIds.add(doc.getId());
         }
@@ -142,13 +243,14 @@ public class TrackingFragment extends Fragment {
 
     // -------------------- Adapter --------------------
     private static class PotholeViewHolder {
-        TextView id, severity, location, creator, date;
+        TextView id, severity, location, creator, date, vehicle;
         PotholeViewHolder(View v) {
             id = v.findViewById(R.id.potholeId);
             severity = v.findViewById(R.id.severityText);
             location = v.findViewById(R.id.locationText);
             creator = v.findViewById(R.id.creatorText);
             date = v.findViewById(R.id.dateText);
+            vehicle = v.findViewById(R.id.vehicleText);
         }
     }
 
