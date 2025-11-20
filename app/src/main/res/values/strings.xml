@@ -5,4 +5,11 @@
     <string name="title_notifications">Notifications</string>
     <string name="title_activity_maps">MapsActivity</string>
     <string name ="back_button_description"> </string>
+
+    <string-array name ="vehicle_type_array">
+        <item> Bicycle </item>
+        <item> Sedan </item>
+        <item> SUV </item>
+        <item> Pickup Truck </item>
+    </string-array>
 </resources>
