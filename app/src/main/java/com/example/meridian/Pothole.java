@@ -18,6 +18,7 @@ public class Pothole {
     private String severity;     // "Low", "Medium", "High"
     private String status;       // e.g., "Reported", "Under Review"
     private String detectedBy;   // userId or "AppUser"
+    private String vehicleType;
     private Timestamp timestamp; // Firestore timestamp
     private GeoPoint location;   // GPS coordinates
     private List<String> followers;
@@ -26,11 +27,12 @@ public class Pothole {
     public Pothole() { this.followers = new ArrayList<>(); }
 
     public Pothole(String id, String severity, String status,
-                   String detectedBy, Timestamp timestamp, GeoPoint location) {
+                   String detectedBy, String vehicleType, Timestamp timestamp, GeoPoint location) {
         this.id = id;
         this.severity = severity;
         this.status = status;
         this.detectedBy = detectedBy;
+        this.vehicleType = vehicleType;
         this.timestamp = timestamp;
         this.location = location;
     }
@@ -93,6 +95,14 @@ public class Pothole {
         this.detectedBy = detectedBy;
     }
 
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
+    }
+
     public Timestamp getTimestamp() {
         return timestamp;
     }
@@ -140,6 +150,7 @@ public class Pothole {
                 ", severity='" + severity + '\'' +
                 ", status='" + status + '\'' +
                 ", detectedBy='" + detectedBy + '\'' +
+                ", vehicleType='" + vehicleType + '\'' +
                 ", timestamp=" + timestamp +
                 ", location=" + location +
                 '}';
