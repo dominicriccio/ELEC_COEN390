@@ -48,7 +48,7 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp"
         android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/potholeText"
+        app:layout_constraintTop_toBottomOf="@id/spinner_vehicle_filter"
         app:layout_constraintBottom_toTopOf="@id/realtimeButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
