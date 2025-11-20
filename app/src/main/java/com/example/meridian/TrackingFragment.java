@@ -72,6 +72,10 @@ public class TrackingFragment extends Fragment {
 
             ReportFragment dialog = new ReportFragment();
             Bundle args = new Bundle();
+
+            String vType = p.getVehicleType();
+            if(vType ==null || vType.isEmpty()) vType = "Unknown";
+            args.putString("vehicle_type", vType);
             args.putString("id", p.getId());
             args.putString("status", p.getStatus());
             args.putString("severity", p.getSeverity());
