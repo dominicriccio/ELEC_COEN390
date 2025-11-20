@@ -52,7 +52,11 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
             severity = getArguments().getString("severity", "Unknown");
 
             vehicleType = getArguments().getString("vehicle_type");
-            if (vehicleType ==null || vehicleType.isEmpty() || vehicleType.equals("null")) {
+            if (vehicleType ==null) {
+                vehicleType = getArguments().getString("vehicleType");
+            }
+
+            if (vehicleType == null || vehicleType.isEmpty() || vehicleType.equals("null")) {
                 vehicleType = "Unknown"; //defensive check .
             }
 
