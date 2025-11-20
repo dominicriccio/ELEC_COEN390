@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/notifications_root"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="12dp"
     tools:context=".NotificationsFragment">
 
-    <!-- EMPTY STATE (Shown only when no notifications exist) -->
+    <!-- EMPTY STATE -->
     <TextView
         android:id="@+id/tv_empty_notifications"
         android:layout_width="match_parent"
@@ -17,14 +17,14 @@
         android:textStyle="bold"
         android:gravity="center"
         android:paddingTop="40dp"
-        android:visibility="gone"
-        android:textColor="#888" />
+        android:paddingBottom="20dp"
+        android:textColor="#888"
+        android:visibility="gone"/>
 
     <!-- LIST OF NOTIFICATIONS -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_notifications"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingTop="8dp" />
-
-</FrameLayout>
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+</LinearLayout>

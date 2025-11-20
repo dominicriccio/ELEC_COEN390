@@ -14,10 +14,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.text.SimpleDateFormat;
@@ -31,33 +29,25 @@ public class NotificationsFragment extends Fragment {
     private NotificationsAdapter adapter;
     private List<UserNotification> notifications = new ArrayList<>();
 
-    private ListenerRegistration notificationListener;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
 
     // =========================================================
-    // USER NOTIFICATION MODEL
+    //  MODEL
     // =========================================================
     public static class UserNotification {
         public String id;
         public String type;
-        public String message;
         public String potholeId;
+        public String newStatus;     // for potholes
+        public Double distanceKm;    // for closures
         public Timestamp timestamp;
 
-        public UserNotification() {} // Needed for Firestore
-
-        public UserNotification(String id, String type, String message, String potholeId, Timestamp timestamp) {
-            this.id = id;
-            this.type = type;
-            this.message = message;
-            this.potholeId = potholeId;
-            this.timestamp = timestamp;
-        }
+        public UserNotification() {}
     }
 
     // =========================================================
-    // FRAGMENT LIFECYCLE
+    //  LIFECYCLE
     // =========================================================
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -79,14 +69,9 @@ public class NotificationsFragment extends Fragment {
         return view;
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        if (notificationListener != null) {
-            notificationListener.remove();
-        }
-    }
-
+    // =========================================================
+    //  LOAD NOTIFICATIONS FROM FIRESTORE ONCE
+    // =========================================================
     private void loadNotificationsOnce() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
@@ -97,37 +82,28 @@ public class NotificationsFragment extends Fragment {
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(snap -> {
+
                     notifications.clear();
 
                     for (DocumentSnapshot doc : snap.getDocuments()) {
+                        UserNotification n = new UserNotification();
 
-                        String type = doc.getString("type");
-                        String potholeId = doc.getString("potholeId");
-                        String msg = "";
+                        n.id = doc.getId();
+                        n.type = doc.getString("type");
+                        n.potholeId = doc.getString("potholeId");
+                        n.newStatus = doc.getString("newStatus");
+                        n.distanceKm = doc.getDouble("distanceKm");
+                        n.timestamp = doc.getTimestamp("timestamp");
 
-                        if ("pothole_update".equals(type)) {
-                            String newStatus = doc.getString("newStatus");
-                            msg = "Pothole \"" + potholeId + "\" status updated to: " + newStatus;
-                        }
-
-                        Timestamp ts = doc.getTimestamp("timestamp");
-
-                        notifications.add(new UserNotification(
-                                doc.getId(),
-                                type,
-                                msg,
-                                potholeId,
-                                ts
-                        ));
+                        notifications.add(n);
                     }
 
                     adapter.notifyDataSetChanged();
                 });
     }
 
-
     // =========================================================
-    // RECYCLER VIEW ADAPTER
+    //  ADAPTER
     // =========================================================
     public class NotificationsAdapter extends RecyclerView.Adapter<NotificationsAdapter.ViewHolder> {
 
@@ -139,7 +115,6 @@ public class NotificationsFragment extends Fragment {
 
         public class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvTitle, tvSubtitle, tvDate;
-
             public ViewHolder(View v) {
                 super(v);
                 tvTitle = v.findViewById(R.id.notification_title);
@@ -160,9 +135,29 @@ public class NotificationsFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
             UserNotification n = list.get(pos);
 
-            h.tvTitle.setText("Pothole Update");
-            h.tvSubtitle.setText(n.message);
+            // Title + message logic
+            if ("pothole_update".equals(n.type)) {
+                h.tvTitle.setText("Pothole Update");
+                h.tvSubtitle.setText("Status changed to: " + n.newStatus);
+            }
+            else if ("closure_nearby".equals(n.type)) {
+                h.tvTitle.setText("Road Closure Near You");
+                if (n.distanceKm != null) {
+                    h.tvSubtitle.setText(
+                            "A closure was detected " +
+                                    String.format("%.1f", n.distanceKm) +
+                                    " km from your home."
+                    );
+                } else {
+                    h.tvSubtitle.setText("A nearby closure was detected.");
+                }
+            }
+            else {
+                h.tvTitle.setText("Notification");
+                h.tvSubtitle.setText("");
+            }
 
+            // Timestamp
             if (n.timestamp != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
                 h.tvDate.setText(sdf.format(n.timestamp.toDate()));

@@ -43,6 +43,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
@@ -714,47 +715,72 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     );
 
                     addSingleClosureToMap(c);
-
-                    sendClosureNearbyNotifications(c);
-
                     cancelClosureDrawing();
                     loadAdminClosures();
+
+                    notifyUsersNearClosure(c);
                 });
     }
 
-    private void sendClosureNearbyNotifications(RoadClosureData closure) {
+    private void notifyUsersNearClosure(RoadClosureData closure) {
 
-        // Compute closure center
-        LatLng center = closure.points.get(closure.points.size() / 2);
+        if (closure.points.isEmpty()) return;
 
-        db.collection("users").get()
-                .addOnSuccessListener(users -> {
-                    for (QueryDocumentSnapshot doc : users) {
+        // Midpoint of closure
+        LatLng mid = closure.points.get(closure.points.size() / 2);
 
-                        Double lat = doc.getDouble("lat");
-                        Double lng = doc.getDouble("lng");
-                        Double radius = doc.getDouble("radiusKm");  // user setting
+        db.collection("users").get().addOnSuccessListener(snap -> {
 
-                        if (lat == null || lng == null || radius == null) continue;
+            for (DocumentSnapshot doc : snap) {
 
-                        LatLng userLoc = new LatLng(lat, lng);
+                GeoPoint gp = doc.getGeoPoint("addressGeo");
+                if (gp == null) continue;
 
-                        double distance = SphericalUtil.computeDistanceBetween(center, userLoc) / 1000.0;
+                double userLat = gp.getLatitude();
+                double userLng = gp.getLongitude();
 
-                        if (distance <= radius) {
-                            Map<String, Object> notif = new HashMap<>();
-                            notif.put("userId", doc.getId());
-                            notif.put("title", "Road Closure Near You");
-                            notif.put("message", "A new construction road closure has been reported nearby.");
-                            notif.put("timestamp", FieldValue.serverTimestamp());
-                            notif.put("type", "closure_alert");
-                            notif.put("relatedId", closure.id);
+                // Compute distance from user’s home to closure midpoint
+                double dist = distanceKm(
+                        userLat, userLng,
+                        mid.latitude, mid.longitude
+                );
 
-                            db.collection("notifications").add(notif);
-                        }
-                    }
-                });
+                if (dist <= 5.0) {   // temporary rule
+
+                    String uid = doc.getId();
+
+                    Map<String, Object> notif = new HashMap<>();
+                    notif.put("type", "closure_nearby");
+                    notif.put("message", "A road closure near your area was created.");
+                    notif.put("closureId", closure.id);
+                    notif.put("distanceKm", dist);
+                    notif.put("timestamp", com.google.firebase.Timestamp.now());
+
+                    db.collection("users")
+                            .document(uid)
+                            .collection("notifications")
+                            .add(notif);
+                }
+            }
+        });
     }
+
+
+
+    private double distanceKm(double lat1, double lon1, double lat2, double lon2) {
+        double R = 6371; // Earth radius km
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a =
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                        Math.cos(Math.toRadians(lat1)) *
+                                Math.cos(Math.toRadians(lat2)) *
+                                Math.sin(dLon/2) * Math.sin(dLon/2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
 
 
 

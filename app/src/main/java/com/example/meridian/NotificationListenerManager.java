@@ -7,6 +7,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.*;
 
+import java.util.Locale;
+
 public class NotificationListenerManager {
 
     private static ListenerRegistration listener;
@@ -34,7 +36,6 @@ public class NotificationListenerManager {
                     long newLastTs = lastSeenTs;
 
                     for (DocumentChange change : snap.getDocumentChanges()) {
-
                         DocumentSnapshot doc = change.getDocument();
 
                         com.google.firebase.Timestamp ts = doc.getTimestamp("timestamp");
@@ -42,23 +43,50 @@ public class NotificationListenerManager {
 
                         long tsLong = ts.toDate().getTime();
 
-                        // Only notify if this timestamp is newer than lastSeenTs
+                        // Skip old notifications
                         if (tsLong <= lastSeenTs) continue;
 
-                        String newStatus = doc.getString("newStatus");
+                        // Get notification type
+                        String type = doc.getString("type");
+                        if (type == null) continue;
 
-                        NotificationHelper.showNotification(
-                                context,
-                                "Pothole Update",
-                                "A pothole you're following is now: " + newStatus
-                        );
+                        String title = "";
+                        String message = "";
 
-                        if (tsLong > newLastTs) {
-                            newLastTs = tsLong;
+                        switch (type) {
+
+                            case "pothole_update":
+                                String newStatus = doc.getString("newStatus");
+                                if (newStatus == null) continue;
+
+                                title = "Pothole Update";
+                                message = "A pothole you're following is now: " + newStatus;
+                                break;
+
+                            case "closure_nearby":
+                                Double dist = doc.getDouble("distanceKm");
+                                if (dist == null) continue;
+
+                                title = "Road Closure Nearby";
+                                message = String.format(
+                                        Locale.getDefault(),
+                                        "A new road closure is %.1f km from your home.",
+                                        dist
+                                );
+                                break;
+
+                            default:
+                                continue;
                         }
+
+                        // Show the notification
+                        NotificationHelper.showNotification(context, title, message);
+
+                        if (tsLong > newLastTs)
+                            newLastTs = tsLong;
                     }
 
-                    // Save new lastSeenTs
+                    // Save the updated timestamp
                     prefs.edit().putLong(LAST_TS_KEY, newLastTs).apply();
                 });
     }
