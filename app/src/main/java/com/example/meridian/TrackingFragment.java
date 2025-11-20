@@ -155,7 +155,7 @@ public class TrackingFragment extends Fragment {
     private void loadAllPotholes(@Nullable String vehicleTypeFilter) {
         com.google.firebase.firestore.Query query = db.collection("potholes");
         if (vehicleTypeFilter != null) {
-            query = query.whereEqualTo("vehicleType", vehicleTypeFilter);
+            query = query.whereEqualTo("vehicle_type", vehicleTypeFilter);
         }
 
         query.get().addOnSuccessListener(queryDocumentSnapshots -> {
@@ -287,6 +287,11 @@ public class TrackingFragment extends Fragment {
 
             holder.creator.setText("Reported by: " +
                     (p.getDetectedBy() != null ? p.getDetectedBy() : "Anonymous"));
+
+            String vType = (p.getVehicleType() != null && !p.getVehicleType().isEmpty()) ? p.getVehicleType() : "Unknown";
+            if (holder.vehicle != null) {
+                holder.vehicle.setText("Vehicle: " + vType);
+            }
 
             Timestamp ts = p.getTimestamp();
             if (ts != null) {
