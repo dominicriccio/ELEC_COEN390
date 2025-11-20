@@ -72,6 +72,10 @@ public class AccountFragment extends Fragment {
             args.putString("id", report.id);
             args.putString("status", report.status);
             args.putString("severity", report.severity);
+
+            String vType = report.vehicleType;
+            if (vType ==null || vType.isEmpty()) vType = "Unknown";
+            args.putString("vehicle_type", vType);
             args.putDouble("latitude", report.getLatitude());
             args.putDouble("longitude", report.getLongitude());
             args.putString("timestamp", report.timestamp != null ? report.timestamp.toDate().toString() : "");
@@ -177,7 +181,9 @@ public class AccountFragment extends Fragment {
                             String severity = document.getString("severity");
                             GeoPoint location = document.getGeoPoint("location");
 
-                            userReports.add(new PotholeReport(id, status, severity, timestamp, location));
+                            String vehicleType = document.getString("vehicle_type");
+
+                            userReports.add(new PotholeReport(id, status, severity, vehicleType, timestamp, location));
 
                             Log.d(TAG, "Loaded pothole " + id + " at " +
                                     (location != null ? location.getLatitude() + ", " + location.getLongitude() : "null"));
@@ -219,13 +225,15 @@ public class AccountFragment extends Fragment {
         String id;
         String status;
         String severity;
+        String vehicleType;
         Timestamp timestamp;
         GeoPoint location;
 
-        PotholeReport(String id, String status, String severity, Timestamp timestamp, GeoPoint location) {
+        PotholeReport(String id, String status, String severity, String vehicleType, Timestamp timestamp, GeoPoint location) {
             this.id = id;
             this.status = status;
             this.severity = severity;
+            this.vehicleType = vehicleType;
             this.timestamp = timestamp;
             this.location = location;
         }
@@ -242,11 +250,18 @@ public class AccountFragment extends Fragment {
     private static class ReportViewHolder extends RecyclerView.ViewHolder {
         TextView tvPotholeId;
         TextView tvReportStatus;
+        TextView tvVehicleInfo;
 
         public ReportViewHolder(@NonNull View itemView) {
             super(itemView);
             tvPotholeId = itemView.findViewById(R.id.tv_pothole_id);
             tvReportStatus = itemView.findViewById(R.id.tv_report_status);
+
+            try {
+                tvVehicleInfo = itemView.findViewById(R.id.tv_vehicle_info);
+            } catch (Exception e) {
+                Log.e("ReportViewHolder", "Error initializing tvVehicleInfo", e);
+            }
         }
     }
 
@@ -287,6 +302,11 @@ public class AccountFragment extends Fragment {
             holder.tvReportStatus.setText(
                     String.format(Locale.getDefault(), "Status: %s (%dd)", report.status, daysAgo)
             );
+
+            if (holder.tvVehicleInfo != null) {
+                String vType = (report.vehicleType != null && !report.vehicleType.isEmpty()) ? report.vehicleType : "Unknown";
+                holder.tvVehicleInfo.setText("Vehicle: " + vType);
+            }
 
             holder.itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onReportClick(report);
