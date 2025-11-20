@@ -60,6 +60,15 @@
             android:layout_marginTop="4dp"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:textColor="@android:color/darker_gray" />
+        <TextView
+            android:id ="@+id/vehicleText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+                android:text="Vehicle: Unknown"
+                android:textSize ="14sp"
+                android:textColor = "@android:color/darker_gray"
+                android:paddingTop="4dp" />
+
     </LinearLayout>
 
 </FrameLayout>
