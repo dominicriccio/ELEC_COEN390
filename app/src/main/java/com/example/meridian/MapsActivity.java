@@ -63,14 +63,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String id;
         String status;
         String severity;
+        String vehicleType;
         GeoPoint location;
         Timestamp timestamp;
         List<String> followers;
 
-        PotholeData(String id, String status, String severity, GeoPoint location, Timestamp timestamp, List<String> followers) {
+        PotholeData(String id, String status, String severity, String vehicleType, GeoPoint location, Timestamp timestamp, List<String> followers) {
             this.id = id;
             this.status = status;
             this.severity = severity;
+            this.vehicleType = vehicleType;
             this.location = location;
             this.timestamp = timestamp;
             if (this.followers != null) {
@@ -167,6 +169,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding.infoWindowLayout.tvCoordinates.setText(String.format(Locale.getDefault(), "Coordinates: %.4f, %.4f",
                 potholeData.location.getLatitude(), potholeData.location.getLongitude()));
 
+        String vType = (potholeData.vehicleType != null &&!potholeData.vehicleType.isEmpty()) ? potholeData.vehicleType : "Unknown";
+
+        if (binding.infoWindowLayout.tvVehicle != null) {
+            binding.infoWindowLayout.tvVehicle.setText("Vehicle: " + vType);
+        } else {
+            binding.infoWindowLayout.tvStatus.setText("Status: " + potholeData.status + " (" + vType +")");
+        }
+
+
         if (potholeData.timestamp != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("M/d/yyyy", Locale.getDefault());
             binding.infoWindowLayout.tvDate.setText("Date: " + sdf.format(potholeData.timestamp.toDate()));
@@ -244,11 +255,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         List<String> followers = (List<String>) doc.get("followers");
+                        String vehicle = doc.getString("vehicle_type");
 
                         PotholeData potholeData = new PotholeData(
                                 doc.getId(),
                                 doc.getString("status"),
                                 doc.getString("severity"),
+                                vehicle,
                                 doc.getGeoPoint("location"),
                                 doc.getTimestamp("timestamp"),
                                 followers
