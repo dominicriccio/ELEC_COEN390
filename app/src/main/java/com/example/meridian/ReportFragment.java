@@ -1,15 +1,20 @@
 package com.example.meridian;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -17,6 +22,9 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -27,72 +35,197 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
 
     private MapView mapView;
     private GoogleMap googleMap;
+
     private double latitude, longitude;
+    private String potholeId;
+    private boolean isFollowing;
+
+    private ReportFragmentListener listener;
+
+    public interface ReportFragmentListener {
+        void onFollowStatusChanged();
+    }
+
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+
+        // Attach listener ONLY if parent fragment implements the interface
+        Fragment parent = getParentFragment();
+        if (parent instanceof ReportFragmentListener) {
+            listener = (ReportFragmentListener) parent;
+        }
+    }
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public View onCreateView(
+            @NonNull LayoutInflater inflater,
+            @Nullable ViewGroup container,
+            @Nullable Bundle savedInstanceState
+    ) {
+
         View view = inflater.inflate(R.layout.fragment_report, container, false);
 
         TextView tvDetails = view.findViewById(R.id.tvDetails);
-        Button btnClose = view.findViewById(R.id.btnClose);
+        ImageView starIcon = view.findViewById(R.id.iv_star);
+        Button btnDelete = view.findViewById(R.id.btnDeletePothole);
         mapView = view.findViewById(R.id.mapView);
 
-        String id = "N/A";
+        // Default hide delete button
+        btnDelete.setVisibility(View.GONE);
+
+        // -------------------------
+        // READ ARGUMENTS
+        // -------------------------
         String status = "Unknown";
         String severity = "Unknown";
         String formattedDate = "Unknown";
 
         if (getArguments() != null) {
-            id = getArguments().getString("id", "N/A");
+            potholeId = getArguments().getString("id", null);
             status = getArguments().getString("status", "Unknown");
             severity = getArguments().getString("severity", "Unknown");
+            isFollowing = getArguments().getBoolean("isFollowing", true);
 
-            // ✅ Support BOTH long timestamp and string timestamp
             long tsMillis = getArguments().getLong("timestampMillis", 0L);
             String timestampString = getArguments().getString("timestamp", null);
 
             if (tsMillis > 0) {
                 Date date = new Date(tsMillis);
-                formattedDate = new SimpleDateFormat("EEEE, MMM dd yyyy", Locale.getDefault()).format(date);
-            } else if (timestampString != null && !timestampString.isEmpty()) {
+                formattedDate = new SimpleDateFormat("EEEE, MMM dd yyyy", Locale.getDefault())
+                        .format(date);
+            } else if (timestampString != null) {
                 try {
-                    // Parse the default Firestore date string format
-                    SimpleDateFormat parser = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ENGLISH);
+                    SimpleDateFormat parser =
+                            new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ENGLISH);
                     Date parsed = parser.parse(timestampString);
                     if (parsed != null) {
-                        formattedDate = new SimpleDateFormat("EEEE, MMM dd yyyy", Locale.getDefault()).format(parsed);
+                        formattedDate = new SimpleDateFormat("EEEE, MMM dd yyyy", Locale.getDefault())
+                                .format(parsed);
                     }
-                } catch (ParseException e) {
-                    formattedDate = timestampString; // fallback
+                } catch (ParseException ignored) {
                 }
             }
 
-            latitude = getArguments().getDouble("latitude", 0d);
-            longitude = getArguments().getDouble("longitude", 0d);
+            latitude = getArguments().getDouble("latitude", 0);
+            longitude = getArguments().getDouble("longitude", 0);
         }
 
+        // -------------------------
+        // FILL DETAILS
+        // -------------------------
         tvDetails.setText(String.format(
                 Locale.getDefault(),
                 "ID: %s\nStatus: %s\nSeverity: %s\nReported on: %s",
-                id, status, severity, formattedDate
+                potholeId, status, severity, formattedDate
         ));
 
+        // -------------------------
+        // FOLLOW ICON SETUP
+        // -------------------------
+        starIcon.setImageResource(isFollowing
+                ? R.drawable.ic_star_filled
+                : R.drawable.ic_star_border);
+
+        starIcon.setOnClickListener(v -> toggleFollow(starIcon));
+
+        // -------------------------
+        // MAP
+        // -------------------------
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        btnClose.setOnClickListener(v -> dismiss());
+        // -------------------------
+        // ADMIN CHECK (FIXED)
+        // -------------------------
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String uid = FirebaseAuth.getInstance().getUid();
+
+        if (uid != null) {
+            db.collection("users").document(uid).get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists() && "admin".equals(doc.getString("role"))) {
+                            btnDelete.setVisibility(View.VISIBLE);
+                            btnDelete.setOnClickListener(v -> deletePothole());
+                        }
+                    });
+        }
+
         return view;
     }
 
+    // ==============================
+    // DELETE POTHOLE (Admin only)
+    // ==============================
+    private void deletePothole() {
+        if (potholeId == null) return;
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        db.collection("potholes")
+                .document(potholeId)
+                .delete()
+                .addOnSuccessListener(a -> {
+                    Toast.makeText(requireContext(), "Pothole deleted", Toast.LENGTH_SHORT).show();
+                    dismiss();
+
+                    // Notify tracking fragment to refresh
+                    FragmentManager fm = getParentFragmentManager();
+                    Fragment f = fm.findFragmentByTag("TRACKING_FRAGMENT");
+
+                    if (f instanceof TrackingFragment) {
+                        ((TrackingFragment) f).forceReload();
+                    }
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
+                );
+    }
+
+    // ==============================
+    // FOLLOW / UNFOLLOW LOGIC
+    // ==============================
+    private void toggleFollow(ImageView starIcon) {
+        String userId = FirebaseAuth.getInstance().getUid();
+        if (userId == null || potholeId == null) return;
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        if (isFollowing) {
+            db.collection("potholes").document(potholeId)
+                    .update("followers", FieldValue.arrayRemove(userId))
+                    .addOnSuccessListener(aVoid -> {
+                        isFollowing = false;
+                        starIcon.setImageResource(R.drawable.ic_star_border);
+
+                        Toast.makeText(getContext(), "Unfollowed", Toast.LENGTH_SHORT).show();
+
+                        if (listener != null) listener.onFollowStatusChanged();
+                    });
+        } else {
+            db.collection("potholes").document(potholeId)
+                    .update("followers", FieldValue.arrayUnion(userId))
+                    .addOnSuccessListener(aVoid -> {
+                        isFollowing = true;
+                        starIcon.setImageResource(R.drawable.ic_star_filled);
+
+                        Toast.makeText(getContext(), "Following", Toast.LENGTH_SHORT).show();
+
+                        if (listener != null) listener.onFollowStatusChanged();
+                    });
+        }
+    }
+
+    // ==============================
+    // MAP VIEW
+    // ==============================
     @Override
     public void onMapReady(@NonNull GoogleMap gMap) {
         googleMap = gMap;
-        LatLng potholeLocation = new LatLng(latitude, longitude);
-        googleMap.addMarker(new MarkerOptions().position(potholeLocation).title("Pothole Location"));
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(potholeLocation, 16f));
+        LatLng loc = new LatLng(latitude, longitude);
+        googleMap.addMarker(new MarkerOptions().position(loc).title("Pothole Location"));
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(loc, 16f));
         googleMap.getUiSettings().setAllGesturesEnabled(false);
     }
 

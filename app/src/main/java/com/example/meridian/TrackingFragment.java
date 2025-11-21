@@ -15,15 +15,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.GeoPoint;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -36,12 +33,16 @@ import java.util.concurrent.TimeUnit;
 public class TrackingFragment extends Fragment {
 
     private static final String TAG = "TrackingFragment";
+
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
+
     private ListView listView;
     private final List<Pothole> potholeList = new ArrayList<>();
     private final Set<String> potholeIds = new HashSet<>();
     private PotholeAdapter adapter;
+
+    private ListenerRegistration potholeListener;
 
     @Nullable
     @Override
@@ -82,13 +83,15 @@ public class TrackingFragment extends Fragment {
         });
 
         loadPersonalizedPotholes();
+
         return view;
     }
 
     private void loadPersonalizedPotholes() {
+
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Toast.makeText(requireContext(), "Please log in to see tracked potholes.", Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(), "Please log in to track potholes.", Toast.LENGTH_LONG).show();
             potholeList.clear();
             adapter.notifyDataSetChanged();
             return;
@@ -96,42 +99,41 @@ public class TrackingFragment extends Fragment {
 
         String userId = currentUser.getUid();
 
-        var reportedTask = db.collection("potholes")
-                .whereEqualTo("detectedBy", userId)
-                .get();
+        // Remove existing listener to avoid duplicates
+        if (potholeListener != null) potholeListener.remove();
 
-        var followedTask = db.collection("potholes")
+        potholeListener = db.collection("potholes")
                 .whereArrayContains("followers", userId)
-                .get();
+                .addSnapshotListener((snap, e) -> {
 
-        Tasks.whenAllSuccess(reportedTask, followedTask).addOnSuccessListener(results -> {
-            potholeList.clear();
-            potholeIds.clear();
+                    if (e != null || snap == null) {
+                        Log.e(TAG, "Listener error", e);
+                        return;
+                    }
 
-            QuerySnapshot reported = (QuerySnapshot) results.get(0);
-            QuerySnapshot followed = (QuerySnapshot) results.get(1);
+                    potholeList.clear();
+                    potholeIds.clear();
 
-            for (DocumentSnapshot doc : reported) addUniquePothole(doc);
-            for (DocumentSnapshot doc : followed) addUniquePothole(doc);
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
+                        addUniquePothole(doc);
+                    }
 
-            potholeList.sort((a, b) -> {
-                if (a.getTimestamp() == null || b.getTimestamp() == null) return 0;
-                return b.getTimestamp().compareTo(a.getTimestamp());
-            });
+                    potholeList.sort((a, b) -> {
+                        if (a.getTimestamp() == null || b.getTimestamp() == null) return 0;
+                        return b.getTimestamp().compareTo(a.getTimestamp());
+                    });
 
-            adapter.notifyDataSetChanged();
+                    adapter.notifyDataSetChanged();
 
-            if (potholeList.isEmpty()) {
-                Toast.makeText(requireContext(), "You are not tracking any potholes.", Toast.LENGTH_SHORT).show();
-            }
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error fetching potholes", e);
-            Toast.makeText(requireContext(), "Failed to load tracked potholes.", Toast.LENGTH_SHORT).show();
-        });
+                    if (potholeList.isEmpty()) {
+                        Toast.makeText(requireContext(), "You are not tracking any potholes.", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void addUniquePothole(DocumentSnapshot doc) {
         if (potholeIds.contains(doc.getId())) return;
+
         Pothole pothole = doc.toObject(Pothole.class);
         if (pothole != null) {
             pothole.setId(doc.getId());
@@ -140,9 +142,9 @@ public class TrackingFragment extends Fragment {
         }
     }
 
-    // -------------------- Adapter --------------------
     private static class PotholeViewHolder {
         TextView id, severity, location, creator, date;
+
         PotholeViewHolder(View v) {
             id = v.findViewById(R.id.potholeId);
             severity = v.findViewById(R.id.severityText);
@@ -163,36 +165,52 @@ public class TrackingFragment extends Fragment {
         @NonNull
         @Override
         public View getView(int pos, View convertView, @NonNull ViewGroup parent) {
+
             PotholeViewHolder holder;
+
             if (convertView == null) {
                 convertView = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.pothole_item, parent, false);
                 holder = new PotholeViewHolder(convertView);
                 convertView.setTag(holder);
-            } else holder = (PotholeViewHolder) convertView.getTag();
+            } else {
+                holder = (PotholeViewHolder) convertView.getTag();
+            }
 
             Pothole p = potholes.get(pos);
 
-            holder.id.setText("Pothole ID: " + (p.getId() != null ? p.getId() : "N/A"));
-            holder.severity.setText("Severity: " + (p.getSeverity() != null ? p.getSeverity() : "Unknown"));
+            holder.id.setText("Pothole ID: " + p.getId());
+            holder.severity.setText("Severity: " + p.getSeverity());
 
             if (p.getLocation() != null) {
                 holder.location.setText(String.format(Locale.getDefault(),
                         "Location: %.5f, %.5f",
                         p.getLocation().getLatitude(),
                         p.getLocation().getLongitude()));
-            } else holder.location.setText("Location: Unknown");
+            } else {
+                holder.location.setText("Location: Unknown");
+            }
 
-            holder.creator.setText("Reported by: " +
-                    (p.getDetectedBy() != null ? p.getDetectedBy() : "Anonymous"));
+            holder.creator.setText("Reported by: " + p.getDetectedBy());
 
             Timestamp ts = p.getTimestamp();
             if (ts != null) {
-                long daysAgo = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis() - ts.toDate().getTime());
+                long daysAgo = TimeUnit.MILLISECONDS.toDays(
+                        System.currentTimeMillis() - ts.toDate().getTime());
                 holder.date.setText("Reported " + daysAgo + " day(s) ago");
-            } else holder.date.setText("Date: Unknown");
+            }
 
             return convertView;
         }
+    }
+
+    public void forceReload() {
+        loadPersonalizedPotholes();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (potholeListener != null) potholeListener.remove();
     }
 }
