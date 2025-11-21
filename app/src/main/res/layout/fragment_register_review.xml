@@ -76,7 +76,10 @@
                     android:id="@+id/btn_back_review"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Back"/>
+                    android:backgroundTint="@color/white"
+                    android:textColor="#FE2C55"
+                    android:text="Back"
+                    app:cornerRadius="24dp" />
 
                 <Button
                     android:id="@+id/btn_create_account"
@@ -85,6 +88,7 @@
                     android:text="Create account"
                     android:layout_marginStart="12dp"
                     android:backgroundTint="#FE2C55"
+                    app:cornerRadius="24dp"
                     android:textColor="@android:color/white"/>
 
             </LinearLayout>
