@@ -71,6 +71,7 @@ public class TrackingFragment extends Fragment {
             args.putDouble("latitude", p.getLocation() != null ? p.getLocation().getLatitude() : 0d);
             args.putDouble("longitude", p.getLocation() != null ? p.getLocation().getLongitude() : 0d);
             args.putLong("timestampMillis", p.getTimestamp() != null ? p.getTimestamp().toDate().getTime() : 0L);
+            args.putBoolean("allowDelete", true);
             dialog.setArguments(args);
 
             dialog.show(getParentFragmentManager(), "reportDetails");

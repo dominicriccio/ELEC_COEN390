@@ -35,7 +35,7 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
 
     private MapView mapView;
     private GoogleMap googleMap;
-
+    boolean allowDelete;
     private double latitude, longitude;
     private String potholeId;
     private boolean isFollowing;
@@ -87,6 +87,7 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
             status = getArguments().getString("status", "Unknown");
             severity = getArguments().getString("severity", "Unknown");
             isFollowing = getArguments().getBoolean("isFollowing", true);
+            allowDelete = getArguments().getBoolean("allowDelete", false);
 
             long tsMillis = getArguments().getLong("timestampMillis", 0L);
             String timestampString = getArguments().getString("timestamp", null);
@@ -143,13 +144,17 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
         String uid = FirebaseAuth.getInstance().getUid();
 
         if (uid != null) {
-            db.collection("users").document(uid).get()
-                    .addOnSuccessListener(doc -> {
-                        if (doc.exists() && "admin".equals(doc.getString("role"))) {
-                            btnDelete.setVisibility(View.VISIBLE);
-                            btnDelete.setOnClickListener(v -> deletePothole());
-                        }
-                    });
+            if(allowDelete) {
+                db.collection("users").document(uid).get()
+                        .addOnSuccessListener(doc -> {
+                            if (doc.exists() && "admin".equals(doc.getString("role"))) {
+                                btnDelete.setVisibility(View.VISIBLE);
+                                btnDelete.setOnClickListener(v -> deletePothole());
+                            }
+                        });
+            } else {
+                btnDelete.setVisibility(View.GONE);
+            }
         }
 
         return view;

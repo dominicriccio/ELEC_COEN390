@@ -18,7 +18,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
-            android:text="Pothole details"
+            android:text="Pothole Details"
             android:textColor="@android:color/black"
             android:textSize="18sp"
             android:textStyle="bold"
