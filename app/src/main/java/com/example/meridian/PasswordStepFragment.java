@@ -1,6 +1,4 @@
-package com.example.meridian;
-
-import android.os.Bundle;
+package com.example.meridian;import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,11 +11,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 public class PasswordStepFragment extends Fragment {
 
     private EditText etPassword, etConfirmPassword, etAdminCode;
     private CheckBox cbAdminToggle;
     private Button btnNext;
+    private Button fabBack; // Changed to private
 
     private static final String SECRET_ADMIN_CODE = "Admin123";
 
@@ -25,14 +26,29 @@ public class PasswordStepFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+        // STEP 1: ONLY inflate and return the view here.
+        return inflater.inflate(R.layout.fragment_register_password, container, false);
+    }
 
-        View view = inflater.inflate(R.layout.fragment_register_password, container, false);
+    // --- START: NEW onViewCreated METHOD ---
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-        etPassword       = view.findViewById(R.id.et_password);
+        // STEP 2: All view logic now goes in here.
+        etPassword        = view.findViewById(R.id.et_password);
         etConfirmPassword = view.findViewById(R.id.et_confirm_password);
         etAdminCode       = view.findViewById(R.id.et_admin_code);
         cbAdminToggle     = view.findViewById(R.id.cb_admin_toggle);
         btnNext           = view.findViewById(R.id.btn_next_password);
+        fabBack           = view.findViewById(R.id.fab_back);
+
+        // The OnClickListener will now work correctly.
+        fabBack.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                getActivity().getSupportFragmentManager().popBackStack();
+            }
+        });
 
         // Hide admin code field initially
         etAdminCode.setVisibility(View.GONE);
@@ -42,9 +58,9 @@ public class PasswordStepFragment extends Fragment {
         });
 
         btnNext.setOnClickListener(v -> validateAndContinue());
-
-        return view;
     }
+    // --- END: NEW onViewCreated METHOD ---
+
 
     private void validateAndContinue() {
         String pass = etPassword.getText().toString().trim();

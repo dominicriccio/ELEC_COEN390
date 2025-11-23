@@ -15,6 +15,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +25,7 @@ public class AddressStepFragment extends Fragment {
 
     private EditText etAddressLine, etCity, etPostalCode;
     private Button btnNext;
+    Button fabBack;
 
     @Nullable
     @Override
@@ -35,6 +38,13 @@ public class AddressStepFragment extends Fragment {
         etCity = view.findViewById(R.id.et_city);
         etPostalCode = view.findViewById(R.id.et_postal_code);
         btnNext = view.findViewById(R.id.btn_next_address);
+        fabBack = view.findViewById(R.id.fab_back);
+        fabBack.setOnClickListener(v -> {
+
+            if (getActivity() != null) {
+                getActivity().getSupportFragmentManager().popBackStack();
+            }
+        });
 
         btnNext.setOnClickListener(v -> validateAndGeocode());
 

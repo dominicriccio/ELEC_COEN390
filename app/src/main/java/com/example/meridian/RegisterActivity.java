@@ -105,6 +105,8 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
 
+
+
     /**
      * AddressStepFragment sends text address AND geocoded coordinates.
      */
