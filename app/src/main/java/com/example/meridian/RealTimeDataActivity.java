@@ -362,7 +362,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
             tvGz.setText(sb.toString());
 
             // --- NEW: Try auto-reporting when az max exceeds threshold ---
-            tryAutoReportIfNeeded(fAzMax60s, fLat, fLon);
+            tryAutoReportIfNeeded(fAz, fLat, fLon);
         });
     }
 
@@ -373,13 +373,13 @@ public class RealTimeDataActivity extends AppCompatActivity {
      *  - lat and lon available
      *  - not reported too recently (MIN_REPORT_INTERVAL_MS)
      */
-    private void tryAutoReportIfNeeded(Double fAzMax60s, Double fHardwareLat, Double fHardwareLon) {
+    private void tryAutoReportIfNeeded(Double fAz, Double fHardwareLat, Double fHardwareLon) {
         // Initial checks: no AZ value, or a report is already in progress.
-        if (fAzMax60s == null) return;
+        if (fAz == null) return;
         if (reportingInProgress.get()) return;
 
         // Check if the acceleration exceeds the threshold.
-        if (fAzMax60s < REPORT_THRESHOLD_AZ) return;
+        if (fAz < REPORT_THRESHOLD_AZ) return;
 
         // Check if the minimum time interval since the last report has passed.
         long now = System.currentTimeMillis();
@@ -420,7 +420,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
         setStatus("Reporting pothole…");
         Log.d(TAG, "Reporting pothole using " + source + " GPS.");
 
-        Pothole pothole = new Pothole(reportLat, reportLon, fAzMax60s);
+        Pothole pothole = new Pothole(reportLat, reportLon, fAz);
 
         // Add to Firestore
         db.collection("potholes")
