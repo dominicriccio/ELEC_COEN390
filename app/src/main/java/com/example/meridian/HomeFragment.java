@@ -41,6 +41,7 @@ import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.Firebase;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -57,6 +58,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     private FusedLocationProviderClient fusedLocationClient;
     private LatLng selectedLocation;  // Location from map search or tap
     private String selectedSeverity = "Minor"; // Default severity
+    private FloatingActionButton fabMap;
 
     // Launcher for the Places Autocomplete activity
     private final ActivityResultLauncher<Intent> startAutocomplete = registerForActivityResult(
@@ -90,6 +92,14 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         setupMapFragment();
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
+
+        fabMap = view.findViewById(R.id.fabMap);
+
+        fabMap.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), MapsActivity.class);
+            startActivity(intent);
+            requireActivity().overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+        });
 
         // Setup UI listeners
         binding.severityGroup.setOnCheckedChangeListener((group, checkedId) -> {
