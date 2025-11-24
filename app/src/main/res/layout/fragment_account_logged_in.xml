@@ -116,23 +116,13 @@
                 tools:text="Address: 123 Grand Av." />
 
             <TextView
-                android:id="@+id/tv_user_vehicle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="16sp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tv_user_address"
-                />
-
-            <TextView
                 android:id="@+id/tv_member_since"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textSize="16sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tv_vehicle_label"
+                app:layout_constraintTop_toBottomOf="@+id/tv_user_address"
                 tools:text="Member Since: 10/10/2023" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

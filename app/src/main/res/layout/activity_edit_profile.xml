@@ -6,15 +6,16 @@
     android:orientation="vertical"
     android:background="#F5F5F5">
 
+    <!-- Toolbar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/edit_profile_toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@android:color/white"
+        android:elevation="4dp"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="Back"
-        app:titleTextColor="@color/black"
-        android:elevation="4dp" />
+        app:title="Edit Profile"
+        app:titleTextColor="@color/black" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -27,17 +28,13 @@
             android:layout_height="wrap_content"
             android:padding="20dp">
 
-            <!-- Title -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Edit Profile"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="@color/black"
+            <!-- Profile Icon -->
+            <ImageView
+                android:layout_width="90dp"
+                android:layout_height="90dp"
                 android:layout_gravity="center_horizontal"
                 android:src="@drawable/ic_account_circle"
-                android:tint="@color/black"
+                app:tint="@color/black"
                 android:layout_marginBottom="20dp" />
 
             <!-- Card -->
@@ -101,8 +98,8 @@
                             <ImageView
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
-                                android:tint="@color/black"
-                                android:src="@drawable/ic_location"/>
+                                android:src="@drawable/ic_location"
+                                app:tint="@color/black" />
 
                             <TextView
                                 android:id="@+id/et_edit_address_display"
@@ -157,13 +154,12 @@
                 android:id="@+id/btn_save_profile"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:backgroundTint="#FC2C54"
-                android:padding="12dp"
                 android:text="Save Changes"
                 android:textColor="@android:color/white"
+                android:backgroundTint="#FE2C55"
                 android:textSize="16sp"
-                app:cornerRadius="50dp" />
+                android:padding="12dp"
+                app:cornerRadius="50dp"/>
         </LinearLayout>
     </ScrollView>
-
 </LinearLayout>
