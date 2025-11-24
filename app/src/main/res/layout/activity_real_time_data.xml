@@ -54,6 +54,14 @@
                 android:text="Accel g: --"
                 android:textSize="20sp" />
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/toggle_gps_source_report"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Use Phone GPS for Reports"
+                android:textSize="16sp" />
+
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
