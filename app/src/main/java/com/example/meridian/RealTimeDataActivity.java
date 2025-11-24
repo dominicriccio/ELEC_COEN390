@@ -57,6 +57,9 @@ public class RealTimeDataActivity extends AppCompatActivity {
     // Stores az values for last 60 seconds
     private final ArrayList<Pair<Long, Double>> recentAz = new ArrayList<>();
 
+    private Double lastKnownLat = null;
+    private Double lastKnownLon = null;
+
     // Firestore instance
     private FirebaseFirestore db;
 
@@ -266,6 +269,20 @@ public class RealTimeDataActivity extends AppCompatActivity {
     private void handleLine(String line) {
         if (line.isEmpty()) return;
 
+        if (line.trim().equalsIgnoreCase("ADD PRESS")) {
+            ui.post(() -> {
+                Toast.makeText(RealTimeDataActivity.this, "Button Press Detected", Toast.LENGTH_SHORT).show();
+
+                if (lastKnownLat != null && lastKnownLon != null) {
+                    tryAutoReportIfNeeded(5.0, lastKnownLat, lastKnownLon);
+                }
+                else {
+                    setStatus("No location data available");
+                }
+            });
+            return;
+        }
+
         String[] parts = line.split(",");
         Double lat = null, lon = null, az = null;
 
@@ -282,6 +299,9 @@ public class RealTimeDataActivity extends AppCompatActivity {
                 }
             } catch (NumberFormatException ignored) {}
         }
+
+        if (lat != null) lastKnownLat = lat;
+        if (lon != null) lastKnownLon = lon;
 
         // Track max az over last 60 seconds
         double azMax60s = 0;
@@ -314,7 +334,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
             tvGz.setText(sb.toString());
 
             // --- NEW: Try auto-reporting when az max exceeds threshold ---
-            tryAutoReportIfNeeded(fAzMax60s, fLat, fLon);
+            tryAutoReportIfNeeded(fAz, fLat, fLon);
         });
     }
 
@@ -325,11 +345,11 @@ public class RealTimeDataActivity extends AppCompatActivity {
      *  - lat and lon available
      *  - not reported too recently (MIN_REPORT_INTERVAL_MS)
      */
-    private void tryAutoReportIfNeeded(Double fAzMax60s, Double fLat, Double fLon) {
-        if (fAzMax60s == null || fLat == null || fLon == null) return;
+    private void tryAutoReportIfNeeded(Double fAz, Double fLat, Double fLon) {
+        if (fAz == null || fLat == null || fLon == null) return;
         if (reportingInProgress.get()) return;
 
-        if (fAzMax60s < REPORT_THRESHOLD_AZ) return;
+        if (fAz < REPORT_THRESHOLD_AZ) return;
 
         long now = System.currentTimeMillis();
         if (now - lastReportTime < MIN_REPORT_INTERVAL_MS) {
@@ -342,7 +362,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
         reportingInProgress.set(true);
         setStatus("Reporting pothole…");
 
-        Pothole pothole = new Pothole(fLat, fLon, fAzMax60s); // uses Pothole(double lat, double lon, double az)
+        Pothole pothole = new Pothole(fLat, fLon, fAz); // uses Pothole(double lat, double lon, double az)
 
         // Add to Firestore
         db.collection("potholes")

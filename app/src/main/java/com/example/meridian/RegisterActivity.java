@@ -36,7 +36,7 @@ public class RegisterActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_register);
+        setContentView(R.layout.activity_main);
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -44,7 +44,7 @@ public class RegisterActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             getSupportFragmentManager()
                     .beginTransaction()
-                    .replace(R.id.register_fragment_container, new NameStepFragment())
+                    .replace(R.id.fragment_container, new NameStepFragment())
                     .commit();
         }
     }
@@ -62,7 +62,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.register_fragment_container, new EmailStepFragment())
+                .replace(R.id.fragment_container, new EmailStepFragment())
                 .addToBackStack(null)
                 .commit();
     }
@@ -78,7 +78,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.register_fragment_container, new PasswordStepFragment())
+                .replace(R.id.fragment_container, new PasswordStepFragment())
                 .addToBackStack(null)
                 .commit();
     }
@@ -99,7 +99,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.register_fragment_container, new AddressStepFragment())
+                .replace(R.id.fragment_container, new AddressStepFragment())
                 .addToBackStack(null)
                 .commit();
     }
@@ -140,7 +140,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.register_fragment_container, reviewFragment)
+                .replace(R.id.fragment_container, reviewFragment)
                 .addToBackStack(null)
                 .commit();
     }
@@ -204,13 +204,5 @@ public class RegisterActivity extends AppCompatActivity {
                                             Toast.LENGTH_LONG).show());
                 });
     }
-
-    @Override
-    public void onBackPressed() {
-        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
-            getSupportFragmentManager().popBackStack();
-        } else {
-            super.onBackPressed();
-        }
-    }
+    
 }

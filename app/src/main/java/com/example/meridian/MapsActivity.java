@@ -167,6 +167,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
             public void handleOnBackPressed() {
                 finish();
                 overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
