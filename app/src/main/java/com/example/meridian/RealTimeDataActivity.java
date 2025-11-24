@@ -1,10 +1,13 @@
 package com.example.meridian;
 
+import static android.content.ContentValues.TAG;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
@@ -15,14 +18,23 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.Priority;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.content.Intent;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.InputStream;
@@ -32,6 +44,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import androidx.core.util.Pair;
 
@@ -46,6 +59,11 @@ public class RealTimeDataActivity extends AppCompatActivity {
     private BluetoothSocket btSocket;
     private InputStream inStr;
     private OutputStream outStr;
+    private LocationCallback locationCallback;
+
+    private SwitchMaterial gpsToggle;
+    private FusedLocationProviderClient fusedLocationClient;
+    private Location lastPhoneLocation;
 
     private Thread readerThread;
     private final AtomicBoolean reading = new AtomicBoolean(false);
@@ -57,9 +75,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
     // Stores az values for last 60 seconds
     private final ArrayList<Pair<Long, Double>> recentAz = new ArrayList<>();
 
-    private Double lastKnownLat = null;
-    private Double lastKnownLon = null;
-
     // Firestore instance
     private FirebaseFirestore db;
 
@@ -68,7 +83,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
     private static final long MIN_REPORT_INTERVAL_MS = 5_000L; // 5 seconds
 
 
-    private long lastReportTime = 0L;
+    private final AtomicLong lastReportTime = new AtomicLong(0);
     private double lastReportLat = Double.NaN;
     private double lastReportLon = Double.NaN;
     private final AtomicBoolean reportingInProgress = new AtomicBoolean(false);
@@ -95,6 +110,26 @@ public class RealTimeDataActivity extends AppCompatActivity {
 
         // Init Firestore
         db = FirebaseFirestore.getInstance();
+
+        gpsToggle = findViewById(R.id.toggle_gps_source_report);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        SharedPreferences prefs = getSharedPreferences("RealTimeSettings", MODE_PRIVATE);
+        boolean usePhoneGps = prefs.getBoolean("usePhoneGps", false); // Default to false (Hardware GPS)
+        gpsToggle.setChecked(usePhoneGps);
+
+        gpsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = getSharedPreferences("RealTimeSettings", MODE_PRIVATE).edit();
+            editor.putBoolean("usePhoneGps", isChecked);
+            editor.apply();
+
+            // If we just switched TO phone GPS, make sure we have a recent location and update the UI
+            if (isChecked) {
+                startPhoneLocationUpdates();
+            }
+        });
+
+        startPhoneLocationUpdates();
 
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         if (btAdapter == null) {
@@ -269,20 +304,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
     private void handleLine(String line) {
         if (line.isEmpty()) return;
 
-        if (line.trim().equalsIgnoreCase("ADD PRESS")) {
-            ui.post(() -> {
-                Toast.makeText(RealTimeDataActivity.this, "Button Press Detected", Toast.LENGTH_SHORT).show();
-
-                if (lastKnownLat != null && lastKnownLon != null) {
-                    tryAutoReportIfNeeded(5.0, lastKnownLat, lastKnownLon);
-                }
-                else {
-                    setStatus("No location data available");
-                }
-            });
-            return;
-        }
-
         String[] parts = line.split(",");
         Double lat = null, lon = null, az = null;
 
@@ -299,9 +320,6 @@ public class RealTimeDataActivity extends AppCompatActivity {
                 }
             } catch (NumberFormatException ignored) {}
         }
-
-        if (lat != null) lastKnownLat = lat;
-        if (lon != null) lastKnownLon = lon;
 
         // Track max az over last 60 seconds
         double azMax60s = 0;
@@ -321,8 +339,18 @@ public class RealTimeDataActivity extends AppCompatActivity {
         final Double fAzMax60s = azMax60s;
 
         ui.post(() -> {
-            if (fLat != null) tvLat.setText(String.format("Latitude %.6f", fLat));
-            if (fLon != null) tvLon.setText(String.format("Longitude %.6f", fLon));
+            if (!gpsToggle.isChecked()) {
+                if (fLat != null) {
+                    tvLat.setText(String.format("Latitude %.6f", fLat));
+                } else {
+                    tvLat.setText("Latitude : --");
+                }
+                if (fLon != null) {
+                    tvLon.setText(String.format("Longitude %.6f", fLon));
+                } else {
+                    tvLon.setText("Longitude : --");
+                }
+            }
 
             StringBuilder sb = new StringBuilder();
             if (fAz != null) sb.append(String.format("Accel g %.2f", fAz));
@@ -334,7 +362,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
             tvGz.setText(sb.toString());
 
             // --- NEW: Try auto-reporting when az max exceeds threshold ---
-            tryAutoReportIfNeeded(fAz, fLat, fLon);
+            tryAutoReportIfNeeded(fAzMax60s, fLat, fLon);
         });
     }
 
@@ -345,55 +373,80 @@ public class RealTimeDataActivity extends AppCompatActivity {
      *  - lat and lon available
      *  - not reported too recently (MIN_REPORT_INTERVAL_MS)
      */
-    private void tryAutoReportIfNeeded(Double fAz, Double fLat, Double fLon) {
-        if (fAz == null || fLat == null || fLon == null) return;
+    private void tryAutoReportIfNeeded(Double fAzMax60s, Double fHardwareLat, Double fHardwareLon) {
+        // Initial checks: no AZ value, or a report is already in progress.
+        if (fAzMax60s == null) return;
         if (reportingInProgress.get()) return;
 
-        if (fAz < REPORT_THRESHOLD_AZ) return;
+        // Check if the acceleration exceeds the threshold.
+        if (fAzMax60s < REPORT_THRESHOLD_AZ) return;
 
+        // Check if the minimum time interval since the last report has passed.
         long now = System.currentTimeMillis();
-        if (now - lastReportTime < MIN_REPORT_INTERVAL_MS) {
+        if (now - lastReportTime.get() < MIN_REPORT_INTERVAL_MS) {
             Log.d("RT", "Skipping report: interval not passed");
             return;
         }
 
+        Double reportLat, reportLon;
+        String source;
 
-        // Mark in-progress and perform the report asynchronously
+        // isChecked() == true means "Use Phone GPS" is toggled ON.
+        if (gpsToggle.isChecked()) {
+            if (lastPhoneLocation == null) {
+                // If we want phone GPS but don't have it, try to get it again and abort this attempt.
+                startPhoneLocationUpdates();
+                Toast.makeText(this, "Waiting for phone GPS signal...", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            reportLat = lastPhoneLocation.getLatitude();
+            reportLon = lastPhoneLocation.getLongitude();
+            source = "Phone";
+        } else {
+            // Use the GPS data from the hardware.
+            if (fHardwareLat == null || fHardwareLon == null) {
+                Log.w(TAG, "Skipping report: Hardware GPS selected but data is null.");
+                return; // Cannot report without coordinates.
+            }
+            reportLat = fHardwareLat;
+            reportLon = fHardwareLon;
+            source = "Hardware";
+        }
+        // --- END: GPS SOURCE SELECTION LOGIC ---
+
+        // Mark in-progress to prevent duplicate reports.
         reportingInProgress.set(true);
+        lastReportTime.set(System.currentTimeMillis());
         setStatus("Reporting pothole…");
+        Log.d(TAG, "Reporting pothole using " + source + " GPS.");
 
-        Pothole pothole = new Pothole(fLat, fLon, fAz); // uses Pothole(double lat, double lon, double az)
+        Pothole pothole = new Pothole(reportLat, reportLon, fAzMax60s);
 
         // Add to Firestore
         db.collection("potholes")
                 .add(pothole)
                 .addOnSuccessListener(docRef -> {
-                    // update the document with its ID (optional but helpful)
                     String docId = docRef.getId();
-                    docRef.update("id", docId)
-                            .addOnCompleteListener(task -> {
-                                // update local tracking state
-                                lastReportTime = System.currentTimeMillis();
-                                lastReportLat = fLat;
-                                lastReportLon = fLon;
-                                reportingInProgress.set(false);
-                                ui.post(() -> {
-                                    Toast.makeText(RealTimeDataActivity.this,
-                                            "Pothole auto-reported (severity: " + pothole.getSeverity() + ")",
-                                            Toast.LENGTH_LONG).show();
-                                    setStatus("Reported");
-                                });
-                            });
+                    docRef.update("id", docId); // Good practice to store the ID.
+
+                    reportingInProgress.set(false); // Reset the flag on success.
+                    ui.post(() -> {
+                        Toast.makeText(RealTimeDataActivity.this,
+                                "Pothole auto-reported (severity: " + pothole.getSeverity() + ")",
+                                Toast.LENGTH_LONG).show();
+                        setStatus("Reported. Monitoring...");
+                    });
                 })
                 .addOnFailureListener(e -> {
                     Log.e("RT", "Failed to write pothole", e);
-                    reportingInProgress.set(false);
+                    reportingInProgress.set(false); // Reset the flag on failure.
                     ui.post(() -> {
                         setStatus("Report failed");
                         Toast.makeText(RealTimeDataActivity.this, "Auto-report failed", Toast.LENGTH_SHORT).show();
                     });
                 });
     }
+
 
     private void closeQuietly() {
         try { if (inStr != null) inStr.close(); } catch (Exception ignored) {}
@@ -415,4 +468,44 @@ public class RealTimeDataActivity extends AppCompatActivity {
         }
         closeQuietly();
     }
+
+    // REPLACE the old startPhoneLocationUpdates with this new version
+    private void startPhoneLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "Location permission not granted. Phone GPS will be unavailable for reporting.");
+            // You should ideally request permissions here if they are missing
+            return;
+        }
+
+        // Define a callback to receive location updates
+        if (locationCallback == null) {
+            locationCallback = new LocationCallback() {
+                @Override
+                public void onLocationResult(@NonNull LocationResult locationResult) {
+                    for (Location location : locationResult.getLocations()) {
+                        if (location != null) {
+                            lastPhoneLocation = location;
+                            Log.d(TAG, "Phone location updated: " + location.getLatitude());
+
+                            if (gpsToggle.isChecked()) {
+                                ui.post(() -> {
+                                    tvLat.setText(String.format("Latitude %.6f", location.getLatitude()));
+                                    tvLon.setText(String.format("Longitude %.6f", location.getLongitude()));
+                                });
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        // Request continuous location updates
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000) // Update every 2 seconds
+                .setMinUpdateIntervalMillis(1000)
+                .build();
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+    }
+
 }
