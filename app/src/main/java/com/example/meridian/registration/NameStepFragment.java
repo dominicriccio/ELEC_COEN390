@@ -18,28 +18,28 @@ public class NameStepFragment extends Fragment {
 
     private EditText etFirstName, etLastName;
     private Button btnNext;
-    private Button fabBack; // Changed to private
+    private Button fabBack;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        // STEP 1: ONLY inflate and return the view here.
+
         return inflater.inflate(R.layout.fragment_register_name, container, false);
     }
 
-    // --- START: NEW onViewCreated METHOD ---
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // STEP 2: All view logic now goes in here.
+
         etFirstName = view.findViewById(R.id.et_first_name);
         etLastName = view.findViewById(R.id.et_last_name);
         btnNext = view.findViewById(R.id.btn_next_name);
         fabBack = view.findViewById(R.id.fab_back);
 
-        // This OnClickListener will now work correctly.
+
         fabBack.setOnClickListener(v -> {
             if (getActivity() != null) {
                 getActivity().finish();
@@ -55,9 +55,9 @@ public class NameStepFragment extends Fragment {
                 return;
             }
 
-            // Continue to next step
+
             ((RegisterActivity) requireActivity()).onNameStepCompleted(first, last);
         });
     }
-    // --- END: NEW onViewCreated METHOD ---
+
 }

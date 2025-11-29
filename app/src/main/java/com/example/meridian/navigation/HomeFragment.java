@@ -50,14 +50,14 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     private static final String TAG = "HomeFragment";
     private FirebaseAuth mAuth;
-    private FragmentHomeBinding binding; // Use View Binding for the fragment
+    private FragmentHomeBinding binding;
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
-    private LatLng selectedLocation;  // Location from map search or tap
-    private String selectedSeverity = "Minor"; // Default severity
+    private LatLng selectedLocation;
+    private String selectedSeverity = "Minor";
     private FloatingActionButton fabMap;
 
-    // Launcher for the Places Autocomplete activity
+
     private final ActivityResultLauncher<Intent> startAutocomplete = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -98,7 +98,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             requireActivity().overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
         });
 
-        // Setup UI listeners
+
         binding.severityGroup.setOnCheckedChangeListener((group, checkedId) -> {
             RadioButton selectedButton = view.findViewById(checkedId);
             selectedSeverity = selectedButton.getText().toString();
@@ -117,19 +117,19 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         String detectedBy = currentUser.getUid();
 
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Request permission from the user
+
             ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             return;
         }
 
-        // 1. Prefer location selected on the map
+
         if (selectedLocation != null) {
             GeoPoint geoPoint = new GeoPoint(selectedLocation.latitude, selectedLocation.longitude);
             FirestoreManager.addPotholeReport(geoPoint, selectedSeverity, detectedBy);
             Toast.makeText(getContext(), "Report sent (selected location)", Toast.LENGTH_SHORT).show();
             resetUI();
         }
-        // 2. Fallback to current GPS location
+
         else {
             fusedLocationClient.getLastLocation()
                     .addOnSuccessListener(location -> {
@@ -146,15 +146,15 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void resetUI() {
-        // Clear the map and reset the selected location
+
         if (mMap != null) {
             mMap.clear();
-            // You might want to re-center the map on the user's current location here
+
         }
         selectedLocation = null;
 
-        // Reset severity selection
-        binding.severityGroup.check(R.id.lowSeverity); // Or whatever your default is
+
+        binding.severityGroup.check(R.id.lowSeverity);
     }
 
     private void initializePlacesApi() {
@@ -184,7 +184,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
     private void handlePlaceSelected(Place place) {
         LatLng location = place.getLatLng();
-        selectedLocation = location; // Save the selected location for reporting
+        selectedLocation = location;
 
         Toast.makeText(getContext(), "Address selected: " + place.getAddress(), Toast.LENGTH_LONG).show();
         hideKeyboard();
@@ -197,7 +197,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void setupMapFragment() {
-        // Use getChildFragmentManager() for fragments inside fragments
+
         SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager()
                 .findFragmentById(R.id.mapFragment);
 
@@ -232,7 +232,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         mMap.setOnMapClickListener(latLng -> {
             mMap.clear();
             mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Location"));
-            selectedLocation = latLng; // Store this for the report
+            selectedLocation = latLng;
             Toast.makeText(getContext(), "Location selected!", Toast.LENGTH_SHORT).show();
         });
 
@@ -268,6 +268,6 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null; // Important to avoid memory leaks
+        binding = null;
     }
 }

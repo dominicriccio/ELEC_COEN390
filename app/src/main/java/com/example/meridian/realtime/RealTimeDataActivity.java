@@ -74,15 +74,16 @@ public class RealTimeDataActivity extends AppCompatActivity {
     private TextView tvStatus, tvLat, tvLon, tvGz;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
-    // Stores az values for last 60 seconds
+
+
     private final ArrayList<Pair<Long, Double>> recentAz = new ArrayList<>();
 
-    // Firestore instance
+
     private FirebaseFirestore db;
 
-    // Reporting control
-    private static final double REPORT_THRESHOLD_AZ = 1.25; // tune this
-    private static final long MIN_REPORT_INTERVAL_MS = 5_000L; // 5 seconds
+
+    private static final double REPORT_THRESHOLD_AZ = 1.25;
+    private static final long MIN_REPORT_INTERVAL_MS = 5_000L;
 
 
     private final AtomicLong lastReportTime = new AtomicLong(0);
@@ -110,14 +111,14 @@ public class RealTimeDataActivity extends AppCompatActivity {
         tvGz  = findViewById(R.id.tvGz);
         setStatus("Not connected");
 
-        // Init Firestore
+
         db = FirebaseFirestore.getInstance();
 
         gpsToggle = findViewById(R.id.toggle_gps_source_report);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         SharedPreferences prefs = getSharedPreferences("RealTimeSettings", MODE_PRIVATE);
-        boolean usePhoneGps = prefs.getBoolean("usePhoneGps", false); // Default to false (Hardware GPS)
+        boolean usePhoneGps = prefs.getBoolean("usePhoneGps", false);
         gpsToggle.setChecked(usePhoneGps);
 
         gpsToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -125,7 +126,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
             editor.putBoolean("usePhoneGps", isChecked);
             editor.apply();
 
-            // If we just switched TO phone GPS, make sure we have a recent location and update the UI
+
             if (isChecked) {
                 startPhoneLocationUpdates();
             }
@@ -196,7 +197,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
                 inStr  = btSocket.getInputStream();
                 outStr = btSocket.getOutputStream();
 
-                // Optional: send handshake if device expects it
+
                 try {
                     outStr.write("START\n".getBytes());
                     outStr.flush();
@@ -323,7 +324,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
             } catch (NumberFormatException ignored) {}
         }
 
-        // Track max az over last 60 seconds
+
         double azMax60s = 0;
         long now = System.currentTimeMillis();
         if (az != null) recentAz.add(new Pair<>(now, az));
@@ -331,7 +332,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
         Iterator<Pair<Long, Double>> iter = recentAz.iterator();
         while (iter.hasNext()) {
             Pair<Long, Double> p = iter.next();
-            if (p.first < now - 60_000) iter.remove(); // remove older than 60s
+            if (p.first < now - 60_000) iter.remove();
             else if (p.second > azMax60s) azMax60s = p.second;
         }
 
@@ -363,27 +364,20 @@ public class RealTimeDataActivity extends AppCompatActivity {
 
             tvGz.setText(sb.toString());
 
-            // --- NEW: Try auto-reporting when az max exceeds threshold ---
+
             tryAutoReportIfNeeded(fAz, fLat, fLon);
         });
     }
 
-    /**
-     * Attempt to report a pothole automatically.
-     * Conditions:
-     *  - fAzMax60s > REPORT_THRESHOLD_AZ
-     *  - lat and lon available
-     *  - not reported too recently (MIN_REPORT_INTERVAL_MS)
-     */
     private void tryAutoReportIfNeeded(Double fAz, Double fHardwareLat, Double fHardwareLon) {
-        // Initial checks: no AZ value, or a report is already in progress.
+
         if (fAz == null) return;
         if (reportingInProgress.get()) return;
 
-        // Check if the acceleration exceeds the threshold.
+
         if (fAz < REPORT_THRESHOLD_AZ) return;
 
-        // Check if the minimum time interval since the last report has passed.
+
         long now = System.currentTimeMillis();
         if (now - lastReportTime.get() < MIN_REPORT_INTERVAL_MS) {
             Log.d("RT", "Skipping report: interval not passed");
@@ -393,10 +387,10 @@ public class RealTimeDataActivity extends AppCompatActivity {
         Double reportLat, reportLon;
         String source;
 
-        // isChecked() == true means "Use Phone GPS" is toggled ON.
+
         if (gpsToggle.isChecked()) {
             if (lastPhoneLocation == null) {
-                // If we want phone GPS but don't have it, try to get it again and abort this attempt.
+
                 startPhoneLocationUpdates();
                 Toast.makeText(this, "Waiting for phone GPS signal...", Toast.LENGTH_SHORT).show();
                 return;
@@ -405,18 +399,18 @@ public class RealTimeDataActivity extends AppCompatActivity {
             reportLon = lastPhoneLocation.getLongitude();
             source = "Phone";
         } else {
-            // Use the GPS data from the hardware.
+
             if (fHardwareLat == null || fHardwareLon == null) {
                 Log.w(TAG, "Skipping report: Hardware GPS selected but data is null.");
-                return; // Cannot report without coordinates.
+                return;
             }
             reportLat = fHardwareLat;
             reportLon = fHardwareLon;
             source = "Hardware";
         }
-        // --- END: GPS SOURCE SELECTION LOGIC ---
 
-        // Mark in-progress to prevent duplicate reports.
+
+
         reportingInProgress.set(true);
         lastReportTime.set(System.currentTimeMillis());
         setStatus("Reporting pothole…");
@@ -424,14 +418,14 @@ public class RealTimeDataActivity extends AppCompatActivity {
 
         Pothole pothole = new Pothole(reportLat, reportLon, fAz);
 
-        // Add to Firestore
+
         db.collection("potholes")
                 .add(pothole)
                 .addOnSuccessListener(docRef -> {
                     String docId = docRef.getId();
-                    docRef.update("id", docId); // Good practice to store the ID.
+                    docRef.update("id", docId);
 
-                    reportingInProgress.set(false); // Reset the flag on success.
+                    reportingInProgress.set(false);
                     ui.post(() -> {
                         Toast.makeText(RealTimeDataActivity.this,
                                 "Pothole auto-reported (severity: " + pothole.getSeverity() + ")",
@@ -441,7 +435,7 @@ public class RealTimeDataActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     Log.e("RT", "Failed to write pothole", e);
-                    reportingInProgress.set(false); // Reset the flag on failure.
+                    reportingInProgress.set(false);
                     ui.post(() -> {
                         setStatus("Report failed");
                         Toast.makeText(RealTimeDataActivity.this, "Auto-report failed", Toast.LENGTH_SHORT).show();
@@ -471,16 +465,16 @@ public class RealTimeDataActivity extends AppCompatActivity {
         closeQuietly();
     }
 
-    // REPLACE the old startPhoneLocationUpdates with this new version
+
     private void startPhoneLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Log.w(TAG, "Location permission not granted. Phone GPS will be unavailable for reporting.");
-            // You should ideally request permissions here if they are missing
+
             return;
         }
 
-        // Define a callback to receive location updates
+
         if (locationCallback == null) {
             locationCallback = new LocationCallback() {
                 @Override
@@ -502,8 +496,8 @@ public class RealTimeDataActivity extends AppCompatActivity {
             };
         }
 
-        // Request continuous location updates
-        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000) // Update every 2 seconds
+
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000)
                 .setMinUpdateIntervalMillis(1000)
                 .build();
 

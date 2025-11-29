@@ -103,7 +103,7 @@ public class TrackingFragment extends Fragment {
 
         String userId = currentUser.getUid();
 
-        // Remove existing listener to avoid duplicates
+
         if (potholeListener != null) potholeListener.remove();
 
         potholeListener = db.collection("potholes")

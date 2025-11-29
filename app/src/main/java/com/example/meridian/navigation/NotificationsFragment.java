@@ -48,13 +48,11 @@ public class NotificationsFragment extends Fragment {
     private int recentlyDeletedPos;
 
 
-    // =========================================================
-    //  MODEL
-    // =========================================================
+
     public static class UserNotification {
         public String id;
-        public String type;        // "pothole_update" or "closure_nearby"
-        public String potholeId;   // OR closureId (same field)
+        public String type;
+        public String potholeId;
         public String newStatus;
         public Double distanceKm;
         public Timestamp timestamp;
@@ -63,9 +61,7 @@ public class NotificationsFragment extends Fragment {
     }
 
 
-    // =========================================================
-    //  MAIN
-    // =========================================================
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -98,7 +94,7 @@ public class NotificationsFragment extends Fragment {
                         int pos = viewHolder.getBindingAdapterPosition();
                         UserNotification deletedNotif = notifications.get(pos);
 
-                        // Remove from list + UI immediately
+
                         notifications.remove(pos);
                         adapter.notifyItemRemoved(pos);
 
@@ -107,30 +103,30 @@ public class NotificationsFragment extends Fragment {
 
                         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-                        // 🔥 DELETE FROM FIRESTORE
+
                         db.collection("users")
                                 .document(user.getUid())
                                 .collection("notifications")
                                 .document(deletedNotif.id)
                                 .delete()
                                 .addOnSuccessListener(a -> {
-                                    // Optionally toast if you want
+
                                 })
                                 .addOnFailureListener(e -> {
                                     Toast.makeText(getContext(), "Failed to delete", Toast.LENGTH_SHORT).show();
                                 });
 
-                        // Optional Undo
+
                         Snackbar.make(recyclerView, "Notification deleted", Snackbar.LENGTH_LONG)
                                 .setAction("Undo", v -> {
-                                    // Firestore restore
+
                                     db.collection("users")
                                             .document(user.getUid())
                                             .collection("notifications")
                                             .document(deletedNotif.id)
                                             .set(deletedNotif);
 
-                                    // Local restore
+
                                     notifications.add(pos, deletedNotif);
                                     adapter.notifyItemInserted(pos);
                                 })
@@ -151,9 +147,9 @@ public class NotificationsFragment extends Fragment {
                         View itemView = viewHolder.itemView;
                         Paint paint = new Paint();
 
-                        // Draw red background
-                        paint.setColor(Color.parseColor("#D32F2F")); // red 700
-                        float cornerRadius = 40f; // adjust as you like
+
+                        paint.setColor(Color.parseColor("#D32F2F"));
+                        float cornerRadius = 40f;
 
                         RectF background = new RectF(
                                 itemView.getRight() + dX,
@@ -164,7 +160,7 @@ public class NotificationsFragment extends Fragment {
                         c.drawRoundRect(background, cornerRadius, cornerRadius, paint);
 
 
-                        // Draw trash icon
+
                         Drawable icon = getResources().getDrawable(R.drawable.ic_delete_white_24);
                         int iconMargin = (itemView.getHeight() - icon.getIntrinsicHeight()) / 2;
                         int iconTop = itemView.getTop() + (itemView.getHeight() - icon.getIntrinsicHeight()) / 2;
@@ -195,7 +191,7 @@ public class NotificationsFragment extends Fragment {
             adapter.notifyItemInserted(recentlyDeletedPos);
             recyclerView.scrollToPosition(recentlyDeletedPos);
 
-            recentlyDeletedNotif = null; // don't delete from DB
+            recentlyDeletedNotif = null;
         });
 
         snackbar.addCallback(new Snackbar.Callback() {
@@ -204,7 +200,7 @@ public class NotificationsFragment extends Fragment {
                 if (event != Snackbar.Callback.DISMISS_EVENT_ACTION &&
                         recentlyDeletedNotif != null) {
 
-                    // User did NOT press undo → delete in Firestore
+
                     FirebaseUser user = mAuth.getCurrentUser();
                     if (user != null) {
                         db.collection("users")
@@ -221,9 +217,7 @@ public class NotificationsFragment extends Fragment {
     }
 
 
-    // =========================================================
-    //  LOAD NOTIFICATIONS
-    // =========================================================
+
     private void loadNotificationsOnce() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) return;
@@ -242,8 +236,8 @@ public class NotificationsFragment extends Fragment {
 
                         n.id = doc.getId();
                         n.type = doc.getString("type");
-                        String potId = doc.getString("potholeId");  // for pothole updates
-                        String closureId = doc.getString("closureId"); // for closure notifications
+                        String potId = doc.getString("potholeId");
+                        String closureId = doc.getString("closureId");
 
                         n.potholeId = (potId != null) ? potId : closureId;
                         n.newStatus = doc.getString("newStatus");
@@ -258,7 +252,7 @@ public class NotificationsFragment extends Fragment {
     }
 
     private void openClosureFromNotification(UserNotification notif) {
-        if (notif.potholeId == null) {  // potholeId = closureId here
+        if (notif.potholeId == null) {
             Toast.makeText(getContext(), "No closure linked to this notification", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -272,7 +266,7 @@ public class NotificationsFragment extends Fragment {
                         return;
                     }
 
-                    // Build closure fragment
+
                     ClosureFragment f = new ClosureFragment();
                     Bundle args = new Bundle();
 
@@ -280,7 +274,7 @@ public class NotificationsFragment extends Fragment {
                     args.putString("description", doc.getString("description"));
                     args.putLong("endDate", doc.getLong("endDate") != null ? doc.getLong("endDate") : 0);
 
-                    // Convert list of lat/lng maps into arrays
+
                     ArrayList<Double> lats = new ArrayList<>();
                     ArrayList<Double> lngs = new ArrayList<>();
 
@@ -320,7 +314,7 @@ public class NotificationsFragment extends Fragment {
                     Pothole p = doc.toObject(Pothole.class);
                     if (p == null) return;
 
-                    // Build and show the ReportFragment
+
                     ReportFragment f = new ReportFragment();
                     Bundle args = new Bundle();
 
@@ -338,7 +332,7 @@ public class NotificationsFragment extends Fragment {
                             p.getTimestamp() != null ? p.getTimestamp().toDate().getTime() : 0L
                     );
 
-                    // Already following if notification exists
+
                     args.putBoolean("isFollowing", true);
 
                     f.setArguments(args);
@@ -346,9 +340,7 @@ public class NotificationsFragment extends Fragment {
                 });
     }
 
-    // =========================================================
-    //  ADAPTER
-    // =========================================================
+
     public class NotificationsAdapter extends RecyclerView.Adapter<NotificationsAdapter.ViewHolder> {
 
         private final List<UserNotification> list;

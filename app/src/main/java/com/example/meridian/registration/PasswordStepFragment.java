@@ -18,7 +18,7 @@ public class PasswordStepFragment extends Fragment {
     private EditText etPassword, etConfirmPassword, etAdminCode;
     private CheckBox cbAdminToggle;
     private Button btnNext;
-    private Button fabBack; // Changed to private
+    private Button fabBack;
 
     private static final String SECRET_ADMIN_CODE = "Admin123";
 
@@ -26,16 +26,16 @@ public class PasswordStepFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        // STEP 1: ONLY inflate and return the view here.
+
         return inflater.inflate(R.layout.fragment_register_password, container, false);
     }
 
-    // --- START: NEW onViewCreated METHOD ---
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // STEP 2: All view logic now goes in here.
+
         etPassword        = view.findViewById(R.id.et_password);
         etConfirmPassword = view.findViewById(R.id.et_confirm_password);
         etAdminCode       = view.findViewById(R.id.et_admin_code);
@@ -43,14 +43,14 @@ public class PasswordStepFragment extends Fragment {
         btnNext           = view.findViewById(R.id.btn_next_password);
         fabBack           = view.findViewById(R.id.fab_back);
 
-        // The OnClickListener will now work correctly.
+
         fabBack.setOnClickListener(v -> {
             if (getActivity() != null) {
                 getActivity().getSupportFragmentManager().popBackStack();
             }
         });
 
-        // Hide admin code field initially
+
         etAdminCode.setVisibility(View.GONE);
 
         cbAdminToggle.setOnCheckedChangeListener((button, isChecked) -> {
@@ -59,14 +59,14 @@ public class PasswordStepFragment extends Fragment {
 
         btnNext.setOnClickListener(v -> validateAndContinue());
     }
-    // --- END: NEW onViewCreated METHOD ---
+
 
 
     private void validateAndContinue() {
         String pass = etPassword.getText().toString().trim();
         String confirm = etConfirmPassword.getText().toString().trim();
 
-        // Password checks
+
         if (TextUtils.isEmpty(pass) || pass.length() < 6) {
             etPassword.setError("Minimum 6 characters");
             return;
@@ -79,7 +79,7 @@ public class PasswordStepFragment extends Fragment {
 
         boolean wantsAdmin = cbAdminToggle.isChecked();
 
-        // If admin mode enabled → validate secret code
+
         if (wantsAdmin) {
             String adminCode = etAdminCode.getText().toString().trim();
             if (!SECRET_ADMIN_CODE.equals(adminCode)) {
@@ -88,7 +88,7 @@ public class PasswordStepFragment extends Fragment {
             }
         }
 
-        // Continue to next step (+ role)
+
         ((RegisterActivity) requireActivity())
                 .onPasswordStepCompleted(pass, confirm, wantsAdmin ? "admin" : "user");
     }

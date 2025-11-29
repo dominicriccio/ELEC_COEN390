@@ -19,7 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Title ("Pothole Update") -->
+
         <TextView
             android:id="@+id/notification_title"
             android:layout_width="wrap_content"
@@ -29,7 +29,7 @@
             android:textSize="17sp"
             android:textColor="#222222" />
 
-        <!-- Subtitle ("New status: Repaired") -->
+
         <TextView
             android:id="@+id/notification_subtitle"
             android:layout_width="wrap_content"
@@ -39,7 +39,7 @@
             android:textSize="15sp"
             android:textColor="#555555" />
 
-        <!-- Timestamp -->
+
         <TextView
             android:id="@+id/notification_date"
             android:layout_width="wrap_content"

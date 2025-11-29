@@ -46,9 +46,7 @@ public class ClosureFragment extends DialogFragment implements OnMapReadyCallbac
         TextView tvDetails = view.findViewById(R.id.tvClosureDetails);
         mapView = view.findViewById(R.id.mapViewClosure);
 
-        // -------------------------
-        // Extract arguments
-        // -------------------------
+
         Bundle args = getArguments();
         if (args != null) {
             closureId = args.getString("id", "N/A");
@@ -59,7 +57,7 @@ public class ClosureFragment extends DialogFragment implements OnMapReadyCallbac
             lngList = (ArrayList<Double>) args.getSerializable("lngs");
         }
 
-        // Format date
+
         String formattedEnd = "Unknown";
         if (endDate > 0) {
             Date d = new Date(endDate);
@@ -72,7 +70,6 @@ public class ClosureFragment extends DialogFragment implements OnMapReadyCallbac
                 closureId, description, formattedEnd
         ));
 
-        // Map setup
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
@@ -90,14 +87,12 @@ public class ClosureFragment extends DialogFragment implements OnMapReadyCallbac
             pts.add(new LatLng(latList.get(i), lngList.get(i)));
         }
 
-        // Draw polyline
         googleMap.addPolyline(new PolylineOptions()
                 .addAll(pts)
                 .width(10f)
-                .color(0xFFFF0000) // red
+                .color(0xFFFF0000)
         );
 
-        // Move camera to first point
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pts.get(0), 16f));
         googleMap.getUiSettings().setAllGesturesEnabled(false);
     }

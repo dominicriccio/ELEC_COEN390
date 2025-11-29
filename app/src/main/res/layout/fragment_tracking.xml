@@ -8,7 +8,7 @@
     android:background="@color/white"
     tools:context=".navigation.TrackingFragment">
 
-    <!-- Title -->
+
     <TextView
         android:id="@+id/potholeText"
         android:layout_width="wrap_content"
@@ -22,7 +22,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- List of tracked potholes -->
+
     <ListView
         android:id="@+id/listView"
         android:layout_width="0dp"
@@ -42,7 +42,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         tools:listitem="@layout/pothole_item" />
 
-    <!-- Bottom button -->
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/realtimeButton"
         android:layout_width="wrap_content"

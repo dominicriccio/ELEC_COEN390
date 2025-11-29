@@ -60,10 +60,10 @@ public class AccountFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Create a single root container for the fragment's lifecycle
+
         rootContainer = new FrameLayout(requireContext());
 
-        // Inflate the views but do not attach them to any parent yet
+
         loggedInView = inflater.inflate(R.layout.fragment_account_logged_in, rootContainer, false);
         loggedOutView = inflater.inflate(R.layout.fragment_account_logged_out, rootContainer, false);
 
@@ -86,23 +86,23 @@ public class AccountFragment extends Fragment {
         });
         reportsRecyclerView.setAdapter(reportsAdapter);
 
-        // Setup the interactive elements for each view
+
         setupLoggedInView(loggedInView);
         setupLoggedOutView(loggedOutView);
 
-        // Return the container that will manage the views
+
         return rootContainer;
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        updateView(); // Refresh state each time fragment resumes
+        updateView();
     }
 
     private void updateView() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        rootContainer.removeAllViews(); // Prevent view stacking
+        rootContainer.removeAllViews();
 
         if (currentUser != null) {
             rootContainer.addView(loggedInView);
@@ -137,9 +137,9 @@ public class AccountFragment extends Fragment {
                         tvAddress.setText("Address: " + (address != null ? address : "Not Provided"));
 
                         if ("admin".equals(role)) {
-                            adminBadge.setVisibility(View.VISIBLE); // Show the badge for admins
+                            adminBadge.setVisibility(View.VISIBLE);
                         } else {
-                            adminBadge.setVisibility(View.GONE);  // Hide it for everyone else
+                            adminBadge.setVisibility(View.GONE);
                         }
 
                         FirebaseUser user = mAuth.getCurrentUser();
@@ -204,7 +204,6 @@ public class AccountFragment extends Fragment {
             Toast.makeText(getContext(), "Logged out", Toast.LENGTH_SHORT).show();
             updateView();
         });
-        //settings
         View btnEditProfile = view.findViewById(R.id.btn_edit_profile);
         if (btnEditProfile != null) {
             btnEditProfile.setOnClickListener(v -> {

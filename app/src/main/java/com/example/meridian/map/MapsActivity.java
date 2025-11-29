@@ -67,7 +67,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private final OkHttpClient httpClient = new OkHttpClient();
 
     private FloatingActionButton fabBack, fabAddClosure, fabConfirmClosure, fabCancelClosure, fabUndoClosure;
-    // Closure card views
+
     private View closureCard;
     private TextView tvClosureTitle, tvClosureEnddate, tvClosureDescription;
     private Button btnClosureModify, btnClosureDelete;
@@ -80,7 +80,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private final List<WeightedLatLng> heatmapPoints = new ArrayList<>();
     private final List<Polyline> closurePolylines = new ArrayList<>();
     private final List<Marker> closureMarkers = new ArrayList<>();
-    // Road continuity tracking
+
     private String lastSnappedPlaceId = null;
     private String lastSnappedRoadName = null;
     private boolean isDrawingClosure = false;
@@ -89,7 +89,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private static final float MAX_SNAP_DISTANCE = 25f;
 
-    // ---------------- DATA CLASSES ----------------
+
     private static class PotholeData {
         String id, status, severity;
         GeoPoint location;
@@ -115,9 +115,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    // ======================================================
-    //                   LIFECYCLE
-    // ======================================================
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -201,10 +199,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             RoadClosureData closure = (RoadClosureData) tag;
 
-            // Center of the polyline
+
             LatLng center = getPolylineCenter(closure.points);
 
-            // Smooth move to center
+
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(center, 16f));
 
             showClosureDetailCard(closure);
@@ -220,7 +218,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (tag instanceof PotholeData) {
                 PotholeData potholeData = (PotholeData) tag;
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
-                showPotholeDetailCard(potholeData, marker);   // 👈 SHOW CARD HERE
+                showPotholeDetailCard(potholeData, marker);
                 return true;
             }
 
@@ -313,12 +311,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             marker.setVisible(alpha > 0f);
             marker.setAlpha(alpha);
         }
-        // Admin closures stay visible at all zoom levels (for now)
+
     }
 
-    // ======================================================
-    //                ROAD SNAP LOGIC (GOOGLE API)
-    // ======================================================
+
     private void handleRoadSnappedTap(LatLng rawTap) {
 
         snapToRoad(rawTap, (snappedPoint, placeId, roadName, error) -> {
@@ -331,14 +327,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return;
             }
 
-            // distance validation
+
             double dist = SphericalUtil.computeDistanceBetween(rawTap, snappedPoint);
             if (dist > MAX_SNAP_DISTANCE) {
                 Toast.makeText(this, "Tap too far from a road", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // OR condition for continuity
+
             if (lastSnappedPlaceId != null || lastSnappedRoadName != null) {
 
                 boolean matchesPlaceId =
@@ -359,12 +355,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
 
-            // Accept segment → update tracking
+
             lastSnappedPlaceId = placeId;
             lastSnappedRoadName = roadName;
 
             if (tempClosurePoints.isEmpty()) {
-                // First point — just add it
+
                 addPointToCurrentClosure(snappedPoint);
                 lastSnappedPlaceId = placeId;
             } else {
@@ -376,7 +372,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         return;
                     }
 
-                    // Do NOT duplicate the last point
+
                     for (int i = 1; i < curvePoints.size(); i++) {
                         tempClosurePoints.add(curvePoints.get(i));
                     }
@@ -449,7 +445,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     String placeId = first.optString("placeId", "");
 
-                    // CALL PLACE DETAILS TO EXTRACT ROAD NAME
+
                     fetchRoadName(placeId, (roadName, e2) -> {
                         if (e2 != null) {
                             runOnUiThread(() -> cb.onResult(snappedPt, placeId, null, e2));
@@ -563,7 +559,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         return;
                     }
 
-                    // Find "route" component → this is the STREET NAME
+
                     String roadName = null;
                     for (int i = 0; i < comp.length(); i++) {
                         JSONObject item = comp.getJSONObject(i);
@@ -597,9 +593,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         void onResult(LatLng snappedPoint, String placeId, String roadName, Exception error);
     }
 
-    // ======================================================
-    //          DRAWING MODE: ADD POINTS TO CLOSURE
-    // ======================================================
+
     private void beginClosureDrawingMode() {
         if (!isAdmin) return;
 
@@ -723,7 +717,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (closure.points.isEmpty()) return;
 
-        // Midpoint of closure
+
         LatLng mid = closure.points.get(closure.points.size() / 2);
 
         db.collection("users").get().addOnSuccessListener(snap -> {
@@ -736,13 +730,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 double userLat = gp.getLatitude();
                 double userLng = gp.getLongitude();
 
-                // Compute distance from user’s home to closure midpoint
+
                 double dist = distanceKm(
                         userLat, userLng,
                         mid.latitude, mid.longitude
                 );
 
-                if (dist <= 5.0) {   // temporary rule
+                if (dist <= 5.0) {
 
                     String uid = doc.getId();
 
@@ -765,7 +759,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     private double distanceKm(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371; // Earth radius km
+        double R = 6371;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double a =
@@ -781,9 +775,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    // ======================================================
-    //              LOAD EXISTING CLOSURES
-    // ======================================================
+
     private void loadAdminClosures() {
         db.collection("closures").get()
                 .addOnSuccessListener(snap -> {
@@ -847,7 +839,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Closure deleted", Toast.LENGTH_SHORT).show();
-                    loadAdminClosures();     // Refresh closures on map
+                    loadAdminClosures();
                     binding.closureDetailCard.setVisibility(View.GONE);
                 })
                 .addOnFailureListener(e ->
@@ -868,7 +860,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             .addOnSuccessListener(aVoid -> {
                                 Toast.makeText(this,
                                         "End date updated", Toast.LENGTH_SHORT).show();
-                                loadAdminClosures();     // Refresh
+                                loadAdminClosures();
                                 binding.closureDetailCard.setVisibility(View.GONE);
                             })
                             .addOnFailureListener(e ->
@@ -880,7 +872,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 calendar.get(Calendar.DAY_OF_MONTH)
         );
 
-        // Prevent picking past dates
+
         picker.getDatePicker().setMinDate(System.currentTimeMillis());
         picker.setTitle("Select new end date");
         picker.show();
@@ -892,7 +884,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Polyline poly = mMap.addPolyline(new PolylineOptions()
                 .addAll(c.points)
                 .width(14f)
-                .color(Color.parseColor("#FFA500"))  // ORANGE
+                .color(Color.parseColor("#FFA500"))
                 .clickable(true)
         );
 
@@ -917,9 +909,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return Color.CYAN;
     }
 
-    // ======================================================
-    //                     Potholes (unchanged)
-    // ======================================================
+
     private void loadPotholes() {
         db.collection("potholes").get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -962,7 +952,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     .icon(BitmapDescriptorFactory.defaultMarker(markerColor)));
                             if (marker != null) {
                                 marker.setTag(potholeData);
-                                marker.setVisible(false); // start hidden
+                                marker.setVisible(false);
                                 potholeMarkers.add(marker);
                             }
                         }
@@ -971,10 +961,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (!heatmapPoints.isEmpty()) {
                         if (heatmapProvider == null) {
                             int[] colors = {
-                                    Color.rgb(255, 255, 102),   // Yellow
-                                    Color.rgb(255, 165, 0),     // Orange
-                                    Color.rgb(255, 69, 0),      // Red-Orange
-                                    Color.rgb(178, 34, 34)      // Dark Red
+                                    Color.rgb(255, 255, 102),
+                                    Color.rgb(255, 165, 0),
+                                    Color.rgb(255, 69, 0),
+                                    Color.rgb(178, 34, 34)
                             };
                             float[] startPoints = {0.2f, 0.5f, 0.7f, 1.0f};
 
@@ -1131,12 +1121,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     String oldStatus = snapshot.getString("status");
 
-                    // Only notify if the status ACTUALLY changed
+
                     if (oldStatus != null && oldStatus.equals(newStatus)) {
                         return;
                     }
 
-                    // Now update
+
                     snapshot.getReference()
                             .update("status", newStatus)
                             .addOnSuccessListener(aVoid -> {
@@ -1152,7 +1142,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     binding.infoWindowLayout.tvStatus.setText("Status: " + newStatus);
                                 }
 
-                                // NOW safe to notify followers
+
                                 notifyPotholeFollowers(potholeId, newStatus);
                             });
                 });

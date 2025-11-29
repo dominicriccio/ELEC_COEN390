@@ -17,7 +17,7 @@ public class NotificationHelper {
 
     public static void showNotification(Context context, String title, String message) {
 
-        // Create channel (Android 8+)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
@@ -30,7 +30,7 @@ public class NotificationHelper {
             manager.createNotificationChannel(channel);
         }
 
-        // Build notification (works on all API)
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notifications_black_24dp)
                 .setContentTitle(title)
@@ -40,11 +40,11 @@ public class NotificationHelper {
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
 
-        // Android 13+ (API 33) needs POST_NOTIFICATIONS
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
-                // Permission denied → do not crash
+
                 return;
             }
         }

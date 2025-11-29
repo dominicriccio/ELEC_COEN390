@@ -21,7 +21,7 @@ public class RegisterActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
-    // Registration data (kept throughout steps)
+
     String firstName;
     String lastName;
     String email;
@@ -50,7 +50,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
     }
 
-    /* ----------------------- STEP CALLBACKS ----------------------- */
+
 
     public void onNameStepCompleted(@NonNull String first, @NonNull String last) {
         firstName = first.trim();
@@ -96,7 +96,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         password = pass;
-        role = selectedRole;   // <<▼ SAVE ROLE (user or admin)
+        role = selectedRole;
 
         getSupportFragmentManager()
                 .beginTransaction()
@@ -106,9 +106,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
 
-    /**
-     * AddressStepFragment sends text address AND geocoded coordinates.
-     */
+
     public void onAddressStepCompleted(String line, String ct, String postal,
                                        double lat, double lng) {
 
@@ -146,7 +144,7 @@ public class RegisterActivity extends AppCompatActivity {
                 .commit();
     }
 
-    /* ----------------------- FINAL SUBMIT ------------------------ */
+
 
     public void onSubmitRegistration() {
 
@@ -170,7 +168,7 @@ public class RegisterActivity extends AppCompatActivity {
 
                     String fullAddress = addressLine + ", " + city + " " + postalCode;
 
-                    // SAVE USER DATA INCLUDING GEOPOINT
+
                     Map<String, Object> userData = new HashMap<>();
                     userData.put("name", firstName);
                     userData.put("surname", lastName);
@@ -178,7 +176,7 @@ public class RegisterActivity extends AppCompatActivity {
                     userData.put("address", fullAddress);
                     userData.put("role", role);
 
-                    // Add GeoPoint
+
                     userData.put("addressGeo", new GeoPoint(addressLat, addressLng));
 
                     db.collection("users")
@@ -186,7 +184,7 @@ public class RegisterActivity extends AppCompatActivity {
                             .set(userData)
                             .addOnSuccessListener(aVoid -> {
 
-                                // EMAIL VERIFICATION
+
                                 user.sendEmailVerification()
                                         .addOnSuccessListener(unused -> {
                                             Toast.makeText(this,

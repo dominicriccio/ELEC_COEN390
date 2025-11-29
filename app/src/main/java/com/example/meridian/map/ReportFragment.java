@@ -52,7 +52,7 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
 
-        // Attach listener ONLY if parent fragment implements the interface
+
         Fragment parent = getParentFragment();
         if (parent instanceof ReportFragmentListener) {
             listener = (ReportFragmentListener) parent;
@@ -74,12 +74,10 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
         Button btnDelete = view.findViewById(R.id.btnDeletePothole);
         mapView = view.findViewById(R.id.mapView);
 
-        // Default hide delete button
+
         btnDelete.setVisibility(View.GONE);
 
-        // -------------------------
-        // READ ARGUMENTS
-        // -------------------------
+
         String status = "Unknown";
         String severity = "Unknown";
         String formattedDate = "Unknown";
@@ -115,33 +113,25 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
             longitude = getArguments().getDouble("longitude", 0);
         }
 
-        // -------------------------
-        // FILL DETAILS
-        // -------------------------
+
         tvDetails.setText(String.format(
                 Locale.getDefault(),
                 "ID: %s\nStatus: %s\nSeverity: %s\nReported on: %s",
                 potholeId, status, severity, formattedDate
         ));
 
-        // -------------------------
-        // FOLLOW ICON SETUP
-        // -------------------------
+
         starIcon.setImageResource(isFollowing
                 ? R.drawable.ic_star_filled
                 : R.drawable.ic_star_border);
 
         starIcon.setOnClickListener(v -> toggleFollow(starIcon));
 
-        // -------------------------
-        // MAP
-        // -------------------------
+
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        // -------------------------
-        // ADMIN CHECK (FIXED)
-        // -------------------------
+
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String uid = FirebaseAuth.getInstance().getUid();
 
@@ -162,9 +152,7 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
         return view;
     }
 
-    // ==============================
-    // DELETE POTHOLE (Admin only)
-    // ==============================
+
     private void deletePothole() {
         if (potholeId == null) return;
 
@@ -177,7 +165,7 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
                     Toast.makeText(requireContext(), "Pothole deleted", Toast.LENGTH_SHORT).show();
                     dismiss();
 
-                    // Notify tracking fragment to refresh
+
                     FragmentManager fm = getParentFragmentManager();
                     Fragment f = fm.findFragmentByTag("TRACKING_FRAGMENT");
 
@@ -190,9 +178,6 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
                 );
     }
 
-    // ==============================
-    // FOLLOW / UNFOLLOW LOGIC
-    // ==============================
     private void toggleFollow(ImageView starIcon) {
         String userId = FirebaseAuth.getInstance().getUid();
         if (userId == null || potholeId == null) return;
@@ -224,9 +209,7 @@ public class ReportFragment extends DialogFragment implements OnMapReadyCallback
         }
     }
 
-    // ==============================
-    // MAP VIEW
-    // ==============================
+
     @Override
     public void onMapReady(@NonNull GoogleMap gMap) {
         googleMap = gMap;

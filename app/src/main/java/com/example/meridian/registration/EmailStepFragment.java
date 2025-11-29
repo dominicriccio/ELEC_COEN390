@@ -18,28 +18,28 @@ public class EmailStepFragment extends Fragment {
 
     private EditText etEmail;
     private Button btnNext;
-    private Button fabBack; // Changed to private
+    private Button fabBack;
 
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        // STEP 1: ONLY inflate and return the view here.
+
         return inflater.inflate(R.layout.fragment_register_email, container, false);
     }
 
-    // --- START: NEW onViewCreated METHOD ---
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // STEP 2: All view logic now goes in here.
+
         etEmail = view.findViewById(R.id.et_email);
         btnNext = view.findViewById(R.id.btn_next_email);
         fabBack = view.findViewById(R.id.fab_back);
 
-        // This OnClickListener will now work correctly.
+
         fabBack.setOnClickListener(v -> {
             if (getActivity() != null) {
                 getActivity().getSupportFragmentManager().popBackStack();
@@ -55,9 +55,9 @@ public class EmailStepFragment extends Fragment {
                 return;
             }
 
-            // Continue to next step
+
             ((RegisterActivity) requireActivity()).onEmailStepCompleted(email);
         });
     }
-    // --- END: NEW onViewCreated METHOD ---
+
 }

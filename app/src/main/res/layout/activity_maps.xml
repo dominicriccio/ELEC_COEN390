@@ -7,14 +7,14 @@
     android:layout_height="match_parent"
     tools:context=".map.MapsActivity">
 
-    <!-- MAP -->
+
     <fragment
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- BACK BUTTON -->
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_back"
         android:layout_width="wrap_content"
@@ -26,7 +26,7 @@
         app:tint="@color/white"
         app:backgroundTint="#FE2C55" />
 
-    <!-- POTHOLE DETAIL CARD -->
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/pothole_detail_card"
         android:layout_width="wrap_content"
@@ -62,7 +62,7 @@
     </com.google.android.material.card.MaterialCardView>
 
 
-    <!-- ADD CLOSURE -->
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add_closure"
         android:layout_width="wrap_content"
@@ -75,7 +75,7 @@
         app:tint="@color/white"
         app:backgroundTint="#F6470D" />
 
-    <!-- CONFIRM -->
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_confirm_closure"
         android:layout_width="wrap_content"
@@ -88,7 +88,7 @@
         android:visibility="gone"
         app:backgroundTint="#25D02A" />
 
-    <!-- CANCEL -->
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_cancel_closure"
         android:layout_width="wrap_content"
@@ -101,7 +101,7 @@
         android:visibility="gone"
         app:backgroundTint="#EF1C0A" />
 
-    <!-- UNDO -->
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_undo_closure"
         android:layout_width="wrap_content"

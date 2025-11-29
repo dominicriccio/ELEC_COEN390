@@ -43,10 +43,10 @@ public class NotificationListenerManager {
 
                         long tsLong = ts.toDate().getTime();
 
-                        // Skip old notifications
+
                         if (tsLong <= lastSeenTs) continue;
 
-                        // Get notification type
+
                         String type = doc.getString("type");
                         if (type == null) continue;
 
@@ -79,14 +79,14 @@ public class NotificationListenerManager {
                                 continue;
                         }
 
-                        // Show the notification
+
                         NotificationHelper.showNotification(context, title, message);
 
                         if (tsLong > newLastTs)
                             newLastTs = tsLong;
                     }
 
-                    // Save the updated timestamp
+
                     prefs.edit().putLong(LAST_TS_KEY, newLastTs).apply();
                 });
     }

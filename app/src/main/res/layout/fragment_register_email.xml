@@ -7,7 +7,7 @@
     android:gravity="top"
     android:orientation="vertical">
 
-    <!-- The FloatingActionButton that was at the top has been moved inside the card below -->
+
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -52,14 +52,13 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- START: NEW BUTTON CONTAINER -->
+
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp">
 
-                <!-- Back Button (aligned to the left) -->
-                <!-- ID is kept as fab_back -->
+
                 <Button
                     android:id="@+id/fab_back"
                     android:backgroundTint="@color/white"
@@ -72,8 +71,7 @@
                     app:cornerRadius="24dp"
                     app:strokeColor="#FE2C55" />
 
-                <!-- Next Button (aligned to the right) -->
-                <!-- ID is kept as btn_next_email -->
+
                 <Button
                     android:id="@+id/btn_next_email"
                     android:layout_width="wrap_content"
@@ -86,7 +84,7 @@
                     app:cornerRadius="24dp" />
 
             </RelativeLayout>
-            <!-- END: NEW BUTTON CONTAINER -->
+
 
         </LinearLayout>
 

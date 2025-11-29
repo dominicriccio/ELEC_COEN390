@@ -8,21 +8,18 @@ import com.google.firebase.firestore.GeoPoint;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Represents a pothole report in Firestore.
- * Fully compatible with Firestore automatic data mapping.
- */
+
 public class Pothole {
 
-    private String id;           // Firestore document ID (set manually)
-    private String severity;     // "Low", "Medium", "High"
-    private String status;       // e.g., "Reported", "Under Review"
-    private String detectedBy;   // userId or "AppUser"
-    private Timestamp timestamp; // Firestore timestamp
-    private GeoPoint location;   // GPS coordinates
+    private String id;
+    private String severity;
+    private String status;
+    private String detectedBy;
+    private Timestamp timestamp;
+    private GeoPoint location;
     private List<String> followers;
 
-    // Required public no-argument constructor for Firestore
+
     public Pothole() { this.followers = new ArrayList<>(); }
 
     public Pothole(String id, String severity, String status,
@@ -36,7 +33,7 @@ public class Pothole {
     }
 
     public Pothole(double lat, double lon, double az) {
-        this.id = null; // ID will be set by Firestore
+        this.id = null;
 
         double a = Math.abs(az);
         if (a >= 4) {
@@ -55,16 +52,10 @@ public class Pothole {
         this.location = new GeoPoint(lat, lon);
     }
 
-
-    // -----------------------
-    // Firestore field mapping
-    // -----------------------
-
     public String getId() {
         return id;
     }
 
-    // This setter is used when the document ID is added manually in FeedFragment
     public void setId(String id) {
         this.id = id;
     }
@@ -115,9 +106,6 @@ public class Pothole {
 
     public void setFollowers(List<String> followers) { this.followers = followers; }
 
-    // -----------------------
-    // Convenience methods
-    // -----------------------
 
     public String getFormattedDate() {
         if (timestamp == null) return "Unknown";
