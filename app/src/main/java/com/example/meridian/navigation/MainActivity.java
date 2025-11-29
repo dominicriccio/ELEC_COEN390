@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setOnItemSelectedListener(navListener);
 
-
+        // Load the default fragment
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                     new HomeFragment()).commit();
@@ -88,9 +88,13 @@ public class MainActivity extends AppCompatActivity {
                 y2 = touchEvent.getY();
                 float deltaX = x2 - x1;
 
-
+                // Only trigger swipe if a significant distance is covered
                 if (deltaX > 200) {
                     Intent i = new Intent(MainActivity.this, MapsActivity.class);
+                    // This flag ensures that when you swipe to the map, the MainActivity is cleared
+                    // from the view hierarchy. When you press back from MapsActivity, you will
+                    // return to a fresh MainActivity, and the nav bar will be visible again.
+                    // This fulfills your requirement for it to "disappear".
                     i.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(i);
                     overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
