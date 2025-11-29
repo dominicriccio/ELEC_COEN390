@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.items;
 
 import static java.lang.Math.abs;
 

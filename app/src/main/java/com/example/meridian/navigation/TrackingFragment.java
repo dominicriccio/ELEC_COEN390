@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.navigation;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -15,6 +15,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.example.meridian.items.Pothole;
+import com.example.meridian.R;
+import com.example.meridian.map.ReportFragment;
+import com.example.meridian.realtime.RealTimeDataActivity;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -22,7 +26,6 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

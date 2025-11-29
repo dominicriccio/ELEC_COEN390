@@ -1,8 +1,8 @@
-package com.example.meridian;
+package com.example.meridian.firebase;
 
 import android.util.Log;
-import android.widget.Toast;
 
+import com.example.meridian.items.Pothole;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;

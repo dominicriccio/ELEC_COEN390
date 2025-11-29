@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.realtime;
 
 import static android.content.ContentValues.TAG;
 
@@ -18,6 +18,9 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.meridian.items.Pothole;
+import com.example.meridian.R;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -29,7 +32,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import android.content.Intent;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;

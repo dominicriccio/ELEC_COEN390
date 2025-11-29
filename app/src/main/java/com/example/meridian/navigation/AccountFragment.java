@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.navigation;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -17,6 +17,11 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.meridian.R;
+import com.example.meridian.settings.SettingsActivity;
+import com.example.meridian.login.LoginActivity;
+import com.example.meridian.map.ReportFragment;
+import com.example.meridian.registration.RegisterActivity;
 import com.google.android.material.chip.Chip;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;

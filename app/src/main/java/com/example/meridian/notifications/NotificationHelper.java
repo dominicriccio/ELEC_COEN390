@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.notifications;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,6 +8,8 @@ import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+
+import com.example.meridian.R;
 
 public class NotificationHelper {
 

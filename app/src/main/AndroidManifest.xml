@@ -30,7 +30,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Meridian">
         <activity
-            android:name=".SettingsActivity"
+            android:name=".settings.SettingsActivity"
             android:exported="false" />
         <!--
              TODO: Before you run your application, you need a Google Maps API key.
@@ -44,11 +44,11 @@
              "YOUR_API_KEY" string in this file with "${MAPS_API_KEY}".
         -->
         <activity
-            android:name=".RealTimeDataActivity"
+            android:name=".realtime.RealTimeDataActivity"
             android:exported="false"
             android:label="Real Time Activity"></activity>
         <activity
-            android:name=".MapsActivity"
+            android:name=".map.MapsActivity"
             android:exported="true"
             android:label="@string/title_activity_maps"></activity>
         <activity
@@ -62,10 +62,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".LoginActivity"
+            android:name=".login.LoginActivity"
             android:exported="false" />
         <activity
-            android:name=".RegisterActivity"
+            android:name=".registration.RegisterActivity"
             android:exported="false" />
 
         <meta-data

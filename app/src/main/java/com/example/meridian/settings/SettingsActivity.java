@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.settings;
 
 import android.location.Address;
 import android.location.Geocoder;
@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.meridian.R;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;

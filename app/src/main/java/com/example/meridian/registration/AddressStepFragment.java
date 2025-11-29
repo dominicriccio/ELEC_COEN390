@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.registration;
 
 import android.location.Address;
 import android.location.Geocoder;
@@ -15,7 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.example.meridian.R;
 
 import java.io.IOException;
 import java.util.List;

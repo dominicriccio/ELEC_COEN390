@@ -10,6 +10,12 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import com.example.meridian.map.MapsActivity;
+import com.example.meridian.navigation.AccountFragment;
+import com.example.meridian.navigation.HomeFragment;
+import com.example.meridian.navigation.TrackingFragment;
+import com.example.meridian.notifications.NotificationListenerManager;
+import com.example.meridian.navigation.NotificationsFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {

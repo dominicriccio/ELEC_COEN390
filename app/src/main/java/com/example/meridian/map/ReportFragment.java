@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.map;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -16,6 +16,8 @@ import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
+import com.example.meridian.R;
+import com.example.meridian.navigation.TrackingFragment;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;

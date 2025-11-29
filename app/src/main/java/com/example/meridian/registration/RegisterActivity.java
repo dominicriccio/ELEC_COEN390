@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.registration;
 
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -7,6 +7,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.meridian.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;

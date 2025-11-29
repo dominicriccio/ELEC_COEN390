@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.notifications;
 
 import android.content.Context;
 import android.content.SharedPreferences;

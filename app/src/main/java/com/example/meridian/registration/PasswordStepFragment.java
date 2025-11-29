@@ -1,4 +1,4 @@
-package com.example.meridian;import android.os.Bundle;
+package com.example.meridian.registration;import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,7 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.example.meridian.R;
 
 public class PasswordStepFragment extends Fragment {
 

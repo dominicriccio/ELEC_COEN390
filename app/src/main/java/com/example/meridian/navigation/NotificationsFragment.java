@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.navigation;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -18,6 +18,10 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.meridian.map.ClosureFragment;
+import com.example.meridian.items.Pothole;
+import com.example.meridian.R;
+import com.example.meridian.map.ReportFragment;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;

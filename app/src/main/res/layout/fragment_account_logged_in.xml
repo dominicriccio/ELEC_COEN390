@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="4dp"
-    tools:context=".AccountFragment">
+    tools:context=".navigation.AccountFragment">
 
     <TextView
         android:id="@+id/account_header_title"
