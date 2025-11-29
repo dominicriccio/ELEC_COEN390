@@ -1,4 +1,4 @@
-package com.example.meridian;
+package com.example.meridian.navigation;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import com.example.meridian.R;
 import com.example.meridian.map.MapsActivity;
 import com.example.meridian.navigation.AccountFragment;
 import com.example.meridian.navigation.HomeFragment;
