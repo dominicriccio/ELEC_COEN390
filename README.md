@@ -1,6 +1,6 @@
 # Meridian — Pothole Detection & Road Reporting
 
-**[▶ Watch the app demo](https://drive.google.com/file/d/1x2Y0gwZcN761sr3JPvkWLX5YCDDKosAw/view?usp=drive_link)**
+**[Watch the app demo](https://drive.google.com/file/d/1x2Y0gwZcN761sr3JPvkWLX5YCDDKosAw/view?usp=drive_link)**
 
 Meridian is an Android application that combines sensor-based pothole detection with an interactive map of road conditions. Users can report potholes, view their location and severity, follow reports, and receive updates. Administrator accounts can manage pothole statuses and road closures directly from the map.
 
